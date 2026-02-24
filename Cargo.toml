@@ -1,0 +1,23 @@
+[workspace]
+resolver = "2"
+members = ["dev", "msdf_font"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+
+[workspace.dependencies]
+glam = "0.32"
+ttf-parser = "0.25"
+image = "0.25"
+
+msdf_font.path = "msdf_font"
+
+[workspace.lints.clippy]
+perf = "deny"
+unwrap_used = "deny"
+complexity = "deny"
+cast_possible_truncation = { level = "allow", priority = 1 }
+cast_possible_wrap = { level = "allow", priority = 1 }
+cast_sign_loss = { level = "allow", priority = 1 }
+cast_precision_loss = { level = "allow", priority = 1 }

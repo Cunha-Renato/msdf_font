@@ -1,0 +1,11 @@
+[package]
+name = "dev"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+msdf_font.workspace = true
+image.workspace = true
+
+[lints]
+workspace = true

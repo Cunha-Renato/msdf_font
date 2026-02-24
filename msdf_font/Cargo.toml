@@ -1,0 +1,11 @@
+[package]
+name = "msdf_font"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+glam.workspace = true
+ttf-parser.workspace = true
+
+[lints]
+workspace = true

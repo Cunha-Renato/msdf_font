@@ -3,7 +3,7 @@ use glam::DVec2;
 
 #[inline]
 pub(crate) const fn symmetrical_trichotomy(p: usize, n: usize) -> usize {
-    (3.0 + 2.875 * p as f64 / (n - 1) as f64 - 1.4375 + 0.5) as usize - 3
+    ((3.0 + 2.875 * p as f64 / (n - 1) as f64 - 1.4375 + 0.5) - 3.0) as usize
 }
 
 #[inline]

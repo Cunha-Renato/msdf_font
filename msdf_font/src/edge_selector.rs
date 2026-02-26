@@ -72,8 +72,7 @@ impl EdgeSelector for TrueDistanceSelector {
     }
 
     fn add_edge(&mut self, _: &Edge, edge: &Edge, _: &Edge) {
-        let mut dummy = 0.0;
-        let distance = edge.sd(self.p, &mut dummy);
+        let distance = edge.sd(self.p, &mut 0.0);
 
         if distance < self.min_distance {
             self.min_distance = distance;

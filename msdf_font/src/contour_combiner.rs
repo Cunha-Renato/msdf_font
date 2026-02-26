@@ -1,9 +1,9 @@
-use glam::DVec2;
 use crate::{
     contour::Contour,
     edge_selector::{EdgeSelector, EdgeSelectorDistance},
     shape::Shape,
 };
+use glam::DVec2;
 
 pub(crate) trait ContourCombiner<E: EdgeSelector> {
     fn new(shape: &Shape) -> Self;

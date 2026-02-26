@@ -5,16 +5,16 @@ use msdf_font::{
 
 fn main() {
     let face =
-        if let Ok(face) = ttf_parser::Face::parse(include_bytes!("../../OpenSans.ttf"), 0) {
+        if let Ok(face) = ttf_parser::Face::parse(include_bytes!("../../Roboto-Black.ttf"), 0) {
             face
         } else {
             return;
         };
-    let glyph_id = face.glyph_index('A').unwrap_or(GlyphId(0));
+    let glyph_id = face.glyph_index('B').unwrap_or(GlyphId(0));
 
     let glyph = GlyphBuilder::default()
-        .field_type(FieldType::Msdf(3.0))
-        .overlapping(false)
+        .field_type(FieldType::Sdf)
+        .overlapping(true)
         .px_range(4)
         .px_size(100)
         .build(&face, glyph_id);

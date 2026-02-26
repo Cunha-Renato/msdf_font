@@ -1,6 +1,8 @@
 use crate::{
-    BitmapData, BitmapImageType, Bounds, Contour, Edge, EdgeColor, FieldType, GenerationConfig,
+    BitmapData, BitmapImageType, Bounds, FieldType, GenerationConfig,
+    contour::Contour,
     contour_combiner::{ContourCombiner, OverlappingContourCombiner, SimpleContourCombiner},
+    edge::{Edge, EdgeColor},
     edge_coloring::{
         init_color, is_corner, switch_color, switch_color_banned, symmetrical_trichotomy,
     },

@@ -1,7 +1,6 @@
 use glam::DVec2;
-
 use crate::{
-    Contour,
+    contour::Contour,
     edge_selector::{EdgeSelector, EdgeSelectorDistance},
     shape::Shape,
 };

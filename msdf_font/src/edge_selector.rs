@@ -1,4 +1,8 @@
-use crate::{Edge, EdgeColor, MultiDistance, SignedDistance, Vec2Ext, median};
+use crate::{
+    MultiDistance, SignedDistance, Vec2Ext,
+    edge::{Edge, EdgeColor},
+    median,
+};
 use core::f64;
 use glam::DVec2;
 

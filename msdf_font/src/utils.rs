@@ -1,7 +1,7 @@
 use crate::Bounds;
 use glam::DVec2;
 
-pub trait Vec2Ext {
+pub(crate) trait Vec2Ext {
     fn cross(self, rhs: Self) -> f64;
 
     fn orthonormal(self, polarity: bool, allow_zero: bool) -> Self;
@@ -32,7 +32,7 @@ impl Vec2Ext for DVec2 {
 }
 
 #[inline]
-pub const fn bound_point(p: DVec2, bounds: &mut Bounds) {
+pub(crate) const fn bound_point(p: DVec2, bounds: &mut Bounds) {
     bounds.min.x = bounds.min.x.min(p.x);
     bounds.min.y = bounds.min.y.min(p.y);
     bounds.max.x = bounds.max.x.max(p.x);
@@ -40,6 +40,6 @@ pub const fn bound_point(p: DVec2, bounds: &mut Bounds) {
 }
 
 #[inline]
-pub const fn median(a: f64, b: f64, c: f64) -> f64 {
+pub(crate) const fn median(a: f64, b: f64, c: f64) -> f64 {
     a.min(b).max(a.max(b).min(c))
 }

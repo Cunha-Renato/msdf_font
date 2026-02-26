@@ -1,6 +1,5 @@
+use crate::{Vec2Ext, edge::EdgeColor};
 use glam::DVec2;
-
-use crate::{EdgeColor, Vec2Ext};
 
 #[inline]
 pub(crate) const fn symmetrical_trichotomy(p: usize, n: usize) -> usize {

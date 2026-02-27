@@ -10,11 +10,12 @@ fn main() {
         } else {
             return;
         };
-    let glyph_id = face.glyph_index('B').unwrap_or(GlyphId(0));
+    let glyph_id = face.glyph_index('A').unwrap_or(GlyphId(0));
 
     let glyph = GlyphBuilder::default()
-        .field_type(FieldType::Sdf)
-        .overlapping(true)
+        // .field_type(FieldType::Sdf)
+        .field_type(FieldType::Msdf(3.0))
+        .overlapping(false)
         .px_range(4)
         .px_size(100)
         .build(&face, glyph_id);

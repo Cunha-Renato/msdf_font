@@ -1,5 +1,5 @@
 use crate::{
-    BitmapData, BitmapImageType, Bounds, FieldType, GenerationConfig,
+    BitmapData, BitmapDataBuilder, BitmapImageType, Bounds, FieldType, GenerationConfig,
     contour::Contour,
     contour_combiner::{ContourCombiner, OverlappingContourCombiner, SimpleContourCombiner},
     edge::{Edge, EdgeColor},
@@ -47,22 +47,27 @@ impl Shape {
 
     pub(crate) fn generate_bitmap(mut self, config: GenerationConfig) -> BitmapData {
         self.resolve_shape_geometry();
-
-        let (bytes, image_type) = match config.field_type {
-            FieldType::Msdf(max_angle) => {
-                self.simple_coloring(f64::from(max_angle), 0);
-
-                (self.generate_msdf(config), BitmapImageType::Rgb8)
-            }
-            FieldType::Sdf => (self.generate_sdf(config), BitmapImageType::L8),
-        };
-
-        BitmapData {
-            bytes,
+        let mut bitmap_builder = BitmapDataBuilder {
             width: config.bitmap_size.0,
             height: config.bitmap_size.1,
-            image_type,
-        }
+            image_type: BitmapImageType::L8,
+        };
+
+        let func = match config.field_type {
+            FieldType::Msdf(max_angle) => {
+                bitmap_builder.image_type = BitmapImageType::Rgb8;
+
+                self.simple_coloring(f64::from(max_angle), 0);
+                Self::generate_msdf
+            }
+            FieldType::Sdf => Self::generate_sdf,
+        };
+
+        let mut bitmap = bitmap_builder.build();
+
+        func(self, config, &mut bitmap);
+
+        bitmap
     }
 
     fn simple_coloring(&mut self, angle_treshold: f64, mut seed: usize) {
@@ -142,61 +147,52 @@ impl Shape {
 
     fn generate_distance_field<E: EdgeSelector, C: ContourCombiner<E>>(
         self,
+        bitmap: &mut BitmapData,
         px_range: f64,
         offset: DVec2,
-        bitmap_size: (usize, usize),
-        bitmap_range: usize,
-    ) -> Vec<u8> {
-        let mut bitmap = Vec::with_capacity(bitmap_size.0 * bitmap_size.1 * bitmap_range);
-
+    ) {
         let contour_combiner = C::new(&self);
         let mut shape_distance_finder = ShapeDistanceFinder::new(&self, contour_combiner);
-        for y in 0..bitmap_size.1 {
-            for x in 0..bitmap_size.0 {
+        for y in 0..bitmap.height {
+            for x in 0..bitmap.width {
                 let p =
-                    DVec2::new(x as f64 + 0.5, bitmap_size.1 as f64 - (y as f64 + 0.5)) + offset;
+                    DVec2::new(x as f64 + 0.5, bitmap.height as f64 - (y as f64 + 0.5)) + offset;
 
                 let min_dist = shape_distance_finder.distance(p);
 
-                min_dist.to_bytes(px_range, |b| bitmap.extend(b));
+                min_dist.to_bytes(px_range, |b| bitmap.set_px(b, x, y));
             }
         }
-
-        bitmap
     }
 
-    fn generate_sdf(self, config: GenerationConfig) -> Vec<u8> {
+    fn generate_sdf(self, config: GenerationConfig, bitmap: &mut BitmapData) {
         if config.overlapping {
             self.generate_distance_field::<TrueDistanceSelector, OverlappingContourCombiner<_>>(
+                bitmap,
                 config.px_range,
                 config.offset,
-                config.bitmap_size,
-                1,
             )
         } else {
             self.generate_distance_field::<TrueDistanceSelector, SimpleContourCombiner<_>>(
+                bitmap,
                 config.px_range,
                 config.offset,
-                config.bitmap_size,
-                1,
             )
         }
     }
 
-    fn generate_msdf(self, config: GenerationConfig) -> Vec<u8> {
+    fn generate_msdf(self, config: GenerationConfig, bitmap: &mut BitmapData) {
         if config.overlapping {
             self.generate_distance_field::<MultiDistanceSelector, OverlappingContourCombiner<_>>(
+                bitmap,
                 config.px_range,
                 config.offset,
-                config.bitmap_size,
-                3,
             )
         } else {
             self.generate_distance_field::<MultiDistanceSelector, SimpleContourCombiner<_>>(
+                bitmap,
                 config.px_range,
                 config.offset,
-                config.bitmap_size,
-                3,
             )
         }
     }
@@ -217,11 +213,7 @@ impl Shape {
                     return None;
                 }
 
-                let pts: Vec<[f64; 2]> = contour
-                    .edges
-                    .iter()
-                    .flat_map(flatten_edge)
-                    .collect();
+                let pts: Vec<[f64; 2]> = contour.edges.iter().flat_map(flatten_edge).collect();
 
                 if pts.len() < 3 {
                     return None;

@@ -16,11 +16,53 @@ pub enum BitmapImageType {
 }
 
 #[derive(Debug)]
+pub(crate) struct BitmapDataBuilder {
+    pub(crate) width: usize,
+    pub(crate) height: usize,
+    pub(crate) image_type: BitmapImageType,
+}
+impl BitmapDataBuilder {
+    #[inline]
+    pub(crate) fn build(self) -> BitmapData {
+        BitmapData::new(self.width, self.height, self.image_type)
+    }
+}
+
+#[derive(Debug)]
 pub struct BitmapData {
     pub bytes: Vec<u8>,
     pub width: usize,
     pub height: usize,
     pub image_type: BitmapImageType,
+}
+impl BitmapData {
+    fn new(width: usize, height: usize, image_type: BitmapImageType) -> Self {
+        let channels = match image_type {
+            BitmapImageType::L8 => 1,
+            BitmapImageType::Rgb8 => 3,
+        };
+
+        Self {
+            bytes: vec![0u8; width * height * channels],
+            width,
+            height,
+            image_type,
+        }
+    }
+
+    pub(crate) fn set_px(&mut self, px: &[u8], mut x: usize, mut y: usize) {
+        match self.image_type {
+            BitmapImageType::L8 => self.bytes[y * self.width + x] = px[0],
+            BitmapImageType::Rgb8 => {
+                x *= 3;
+                y *= self.width * 3;
+
+                self.bytes[y + x] = px[0];
+                self.bytes[y + x + 1] = px[1];
+                self.bytes[y + x + 2] = px[2];
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]

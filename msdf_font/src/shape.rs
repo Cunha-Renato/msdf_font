@@ -220,7 +220,7 @@ impl Shape {
                 let pts: Vec<[f64; 2]> = contour
                     .edges
                     .iter()
-                    .flat_map(|edge| flatten_edge(edge))
+                    .flat_map(flatten_edge)
                     .collect();
 
                 if pts.len() < 3 {

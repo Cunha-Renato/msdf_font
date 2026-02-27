@@ -10,6 +10,20 @@ pub enum FieldType {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub enum BitmapImageType {
+    L8,
+    Rgb8,
+}
+
+#[derive(Debug)]
+pub struct BitmapData {
+    pub bytes: Vec<u8>,
+    pub width: usize,
+    pub height: usize,
+    pub image_type: BitmapImageType,
+}
+
+#[derive(Debug, Clone, Copy)]
 pub(crate) struct GenerationConfig {
     pub(crate) px_range: f64,
     pub(crate) offset: DVec2,

@@ -42,6 +42,14 @@ pub(crate) struct Edge {
 }
 impl Edge {
     #[inline]
+    pub(crate) const fn new_line_color(p0: DVec2, p1: DVec2, color: EdgeColor) -> Self {
+        Self {
+            etype: EdgeType::Line { p0, p1 },
+            color,
+        }
+    }
+
+    #[inline]
     pub(crate) const fn new_line(p0: DVec2, p1: DVec2) -> Self {
         Self {
             etype: EdgeType::Line { p0, p1 },

@@ -2,13 +2,13 @@ use crate::{contour_combiner::ContourCombiner, edge_selector::EdgeSelector, shap
 use glam::DVec2;
 use std::marker::PhantomData;
 
-pub(crate) struct ShapeDistanceFinder<E: EdgeSelector, C: ContourCombiner<E>> {
-    shape: Shape,
+pub(crate) struct ShapeDistanceFinder<'a, E: EdgeSelector, C: ContourCombiner<E>> {
+    shape: &'a Shape,
     combiner: C,
     _p: PhantomData<E>,
 }
-impl<E: EdgeSelector, C: ContourCombiner<E>> ShapeDistanceFinder<E, C> {
-    pub(crate) fn new(shape: Shape, combiner: C) -> Self {
+impl<'a, E: EdgeSelector, C: ContourCombiner<E>> ShapeDistanceFinder<'a, E, C> {
+    pub(crate) fn new(shape: &'a Shape, combiner: C) -> Self {
         Self {
             shape,
             combiner,

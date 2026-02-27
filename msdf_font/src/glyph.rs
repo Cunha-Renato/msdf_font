@@ -1,4 +1,4 @@
-use crate::{FieldType, GenerationConfig, shape::Shape};
+use crate::{BitmapData, FieldType, GenerationConfig, shape::Shape};
 use glam::DVec2;
 use ttf_parser::Face;
 
@@ -78,20 +78,6 @@ impl GlyphBuilder {
             bitmap_data: shape.generate_bitmap(config),
         }
     }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum BitmapImageType {
-    L8,
-    Rgb8,
-}
-
-#[derive(Debug)]
-pub struct BitmapData {
-    pub bytes: Vec<u8>,
-    pub width: usize,
-    pub height: usize,
-    pub image_type: BitmapImageType,
 }
 
 pub struct Glyph {

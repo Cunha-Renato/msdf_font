@@ -1,4 +1,7 @@
-use crate::Bounds;
+use crate::{
+    Bounds,
+    edge::{Edge, EdgeType},
+};
 use glam::DVec2;
 
 pub(crate) trait Vec2Ext {
@@ -42,4 +45,42 @@ pub(crate) const fn bound_point(p: DVec2, bounds: &mut Bounds) {
 #[inline]
 pub(crate) const fn median(a: f64, b: f64, c: f64) -> f64 {
     a.min(b).max(a.max(b).min(c))
+}
+
+pub(crate) fn flatten_edge(edge: &Edge) -> Vec<[f64; 2]> {
+    match edge.etype {
+        EdgeType::Line { p0, .. } => vec![[p0.x, p0.y]],
+        EdgeType::Quad { p0, p1, p2 } => {
+            let steps = quad_flatten_steps(p0, p1, p2);
+
+            (0..steps)
+                .map(|i| {
+                    let t = i as f64 / steps as f64;
+                    let p = edge.point(t);
+
+                    [p.x, p.y]
+                })
+                .collect()
+        }
+    }
+}
+
+fn quad_flatten_steps(p0: DVec2, p1: DVec2, p2: DVec2) -> usize {
+    const TOLERANCE: f64 = 0.1;
+    const MIN_STEPS: usize = 4;
+    const MAX_STEPS: usize = 32;
+
+    // Max deviation of a quadratic bezier from a straight line is:
+    // deviation = 0.25 * |p1 - 0.5*(p0+p2)|
+    let mid = (p0 + p2) * 0.5;
+    let deviation = (p1 - mid).length() * 0.25;
+
+    if deviation <= TOLERANCE {
+        return MIN_STEPS;
+    }
+
+    // Number of steps needed so that each chord is within tolerance:
+    // steps = sqrt(deviation / tolerance)  (from standard subdivision formula)
+    let steps = (deviation / TOLERANCE).sqrt().ceil() as usize;
+    steps.clamp(MIN_STEPS, MAX_STEPS)
 }

@@ -12,11 +12,12 @@ pub(super) struct Packer {
 }
 impl Packer {
     // Padding in px for x and y;
-    const PADDING: usize = 2;
+    const PADDING: usize = 1;
 
     pub(super) fn pack(rects: Vec<(usize, usize)>) -> Self {
         let mut total_area = 0;
 
+        // Indexing the rects.
         let mut rects_indexed = rects
             .into_iter()
             .enumerate()

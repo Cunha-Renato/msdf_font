@@ -1,14 +1,27 @@
 mod packer;
 
-use crate::{BitmapData, BitmapDataBuilder, Glyph, GlyphBuilder, shape::Shape};
-use ttf_parser::{Face, GlyphId};
+use crate::{BitmapData, BitmapDataBuilder, Glyph, GlyphBuilder, GlyphData};
+use std::collections::HashMap;
+use ttf_parser::Face;
+
+#[derive(Debug)]
+pub struct AtlasGlyphData {
+    pub offset: (usize, usize),
+    pub size: (usize, usize),
+    pub data: GlyphData,
+}
 
 pub trait GlyphExt {
-    fn build_atlas(self, face: &Face, glyph_ids: &[GlyphId]) -> Atlas;
+    fn build_atlas(self, face: &Face, c: &[char]) -> Atlas;
 }
 
 impl GlyphExt for GlyphBuilder {
-    fn build_atlas(self, face: &Face, glyph_ids: &[GlyphId]) -> Atlas {
+    fn build_atlas(self, face: &Face, c: &[char]) -> Atlas {
+        let (chars, glyph_ids) = c
+            .iter()
+            .filter_map(|c| face.glyph_index(*c).map(|gid| (*c, gid)))
+            .collect::<(Vec<_>, Vec<_>)>();
+
         if glyph_ids.is_empty() {
             todo!();
         }
@@ -19,11 +32,10 @@ impl GlyphExt for GlyphBuilder {
         let (sizes, glyphs) = glyph_ids
             .iter()
             .map(|gid| {
-                let mut shape = Shape::new(scale);
-                face.outline_glyph(*gid, &mut shape);
-
                 let glyph = Glyph::new(
-                    shape,
+                    face,
+                    *gid,
+                    scale,
                     px_range,
                     self.field_type,
                     self.overlapping,
@@ -44,16 +56,35 @@ impl GlyphExt for GlyphBuilder {
         }
         .build();
 
+        let glyph_table = packed
+            .iter()
+            .map(|p| {
+                (
+                    chars[p.index],
+                    AtlasGlyphData {
+                        offset: (p.x, p.y),
+                        size: (
+                            glyphs[p.index].bitmap_data.width,
+                            glyphs[p.index].bitmap_data.height,
+                        ),
+                        data: glyphs[p.index].glyph_data,
+                    },
+                )
+            })
+            .collect();
+
         write_atlas_bitmap(&mut bitmap, packed, glyphs);
 
         Atlas {
             bitmap_data: bitmap,
+            glyph_table,
         }
     }
 }
 
 pub struct Atlas {
     pub bitmap_data: BitmapData,
+    pub glyph_table: HashMap<char, AtlasGlyphData>,
 }
 
 fn write_atlas_bitmap(

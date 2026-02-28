@@ -1,19 +1,6 @@
-use crate::{BitmapData, FieldType, GenerationConfig, shape::Shape};
+use crate::{BitmapData, FieldType, GenerationConfig, GlyphBounds, GlyphData, shape::Shape};
 use glam::DVec2;
 use ttf_parser::{Face, GlyphId};
-
-#[derive(Debug, Clone, Copy)]
-pub struct GlyphBounds {
-    pub min: (f32, f32),
-    pub max: (f32, f32),
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct GlyphData {
-    pub advance: (f32, f32),
-    pub bearing: (f32, f32),
-    pub bounds: GlyphBounds,
-}
 
 #[derive(Debug)]
 pub struct GlyphBuilder {

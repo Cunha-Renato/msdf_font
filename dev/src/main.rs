@@ -1,3 +1,5 @@
+mod app;
+
 use msdf_font::{
     BitmapImageType, FieldType, GlyphBuilder, GlyphExt,
     ttf_parser::{self, GlyphId},
@@ -13,14 +15,20 @@ fn main() {
 
     let atlas = GlyphBuilder::default()
         // .field_type(FieldType::Sdf)
-        .field_type(FieldType::Msdf(3.0))
+        .field_type(FieldType::Msdf(2.0))
         .overlapping(false)
-        .px_range(4)
-        .px_size(100)
-        // .build(&face, glyph_id);
-        .build_atlas(&face, &glyph_ids);
+        .fix_geometry(false)
+        .px_range(1)
+        .px_size(20)
+        .build(&face, glyph_ids[0]);
+    // .build_atlas(&face, &[glyph_ids[1]]);
 
-    if image::save_buffer(
+    println!(
+        "({}, {})",
+        atlas.bitmap_data.width, atlas.bitmap_data.height
+    );
+
+    let _ = image::save_buffer(
         "image.png",
         &atlas.bitmap_data.bytes,
         atlas.bitmap_data.width as u32,
@@ -30,6 +38,8 @@ fn main() {
             BitmapImageType::Rgb8 => image::ColorType::Rgb8,
         },
     )
-    .is_ok()
-    {}
+    .is_ok();
+
+    let el = winit::event_loop::EventLoop::new().unwrap();
+    el.run_app(&mut crate::app::App::default()).unwrap();
 }

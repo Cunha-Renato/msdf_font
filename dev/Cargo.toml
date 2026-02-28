@@ -6,6 +6,9 @@ edition.workspace = true
 [dependencies]
 msdf_font = { workspace = true, features = ["atlas"] }
 image.workspace = true
+l3gion.workspace = true
+winit.workspace = true
+pollster.workspace = true
 
 [lints]
 workspace = true

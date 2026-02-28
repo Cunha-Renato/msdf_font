@@ -14,6 +14,11 @@ i_overlay = "4.4"
 
 msdf_font.path = "msdf_font"
 
+# Dev
+winit = "0.30"
+l3gion.path = "../l3gion/l3gion"
+pollster = "0.4"
+
 [workspace.lints.clippy]
 perf = "deny"
 unwrap_used = "deny"

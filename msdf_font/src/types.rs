@@ -82,8 +82,9 @@ pub(crate) struct GenerationConfig {
     pub(crate) px_range: f64,
     pub(crate) offset: DVec2,
     pub(crate) bitmap_size: (usize, usize),
-    pub(crate) overlapping: bool,
     pub(crate) field_type: FieldType,
+    pub(crate) overlapping: bool,
+    pub(crate) fix_geometry: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

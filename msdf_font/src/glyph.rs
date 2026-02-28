@@ -9,6 +9,7 @@ pub struct GlyphBuilder {
     pub(crate) max_angle: f64,
     pub(crate) field_type: FieldType,
     pub(crate) overlapping: bool,
+    pub(crate) fix_geometry: bool,
 }
 impl Default for GlyphBuilder {
     fn default() -> Self {
@@ -18,6 +19,7 @@ impl Default for GlyphBuilder {
             max_angle: 3.0,
             field_type: FieldType::default(),
             overlapping: true,
+            fix_geometry: false,
         }
     }
 }
@@ -53,6 +55,12 @@ impl GlyphBuilder {
     }
 
     #[inline]
+    pub const fn fix_geometry(mut self, fix_geometry: bool) -> Self {
+        self.fix_geometry = fix_geometry;
+        self
+    }
+
+    #[inline]
     pub fn get_scale(&self, face: &Face) -> f64 {
         f64::from(self.px_size) / f64::from(face.units_per_em())
     }
@@ -64,7 +72,13 @@ impl GlyphBuilder {
         let mut shape = Shape::new(scale);
         face.outline_glyph(glyph_id, &mut shape);
 
-        Glyph::new(shape, px_range, self.overlapping, self.field_type)
+        Glyph::new(
+            shape,
+            px_range,
+            self.field_type,
+            self.overlapping,
+            self.fix_geometry,
+        )
     }
 }
 
@@ -75,8 +89,9 @@ impl Glyph {
     pub(crate) fn new(
         shape: Shape,
         px_range: f64,
-        overlapping: bool,
         field_type: FieldType,
+        overlapping: bool,
+        fix_geometry: bool,
     ) -> Self {
         let mut bounds = shape.bounds();
         bounds.min -= DVec2::splat(px_range);
@@ -89,8 +104,9 @@ impl Glyph {
             px_range,
             offset: bounds.min,
             bitmap_size: (width, height),
-            overlapping,
             field_type,
+            overlapping,
+            fix_geometry,
         };
 
         Glyph {

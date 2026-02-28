@@ -22,7 +22,13 @@ impl GlyphExt for GlyphBuilder {
                 let mut shape = Shape::new(scale);
                 face.outline_glyph(*gid, &mut shape);
 
-                let glyph = Glyph::new(shape, px_range, self.overlapping, self.field_type);
+                let glyph = Glyph::new(
+                    shape,
+                    px_range,
+                    self.field_type,
+                    self.overlapping,
+                    self.fix_geometry,
+                );
 
                 ((glyph.bitmap_data.width, glyph.bitmap_data.height), glyph)
             })

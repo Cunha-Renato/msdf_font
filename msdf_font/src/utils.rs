@@ -66,7 +66,7 @@ pub(crate) fn flatten_edge(edge: &Edge) -> Vec<[f64; 2]> {
 }
 
 fn quad_flatten_steps(p0: DVec2, p1: DVec2, p2: DVec2) -> usize {
-    const TOLERANCE: f64 = 0.1;
+    const TOLERANCE: f64 = 0.001;
     const MIN_STEPS: usize = 4;
     const MAX_STEPS: usize = 32;
 

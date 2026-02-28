@@ -46,7 +46,10 @@ impl Shape {
     }
 
     pub(crate) fn generate_bitmap(mut self, config: GenerationConfig) -> BitmapData {
-        self.resolve_shape_geometry();
+        if config.fix_geometry {
+            self.resolve_shape_geometry();
+        }
+
         let mut bitmap_builder = BitmapDataBuilder {
             width: config.bitmap_size.0,
             height: config.bitmap_size.1,

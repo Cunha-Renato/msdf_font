@@ -1,6 +1,6 @@
-use std::sync::Arc;
+use std::{fs::File, io::BufReader, sync::Arc};
 
-use image::{EncodableLayout, GenericImageView};
+use image::EncodableLayout;
 use l3gion::{
     renderer::{
         LgBuildWithRenderer, LgDrawOp, LgRenderPassBuilder, LgRenderer, LgRendererBuilder,
@@ -12,7 +12,7 @@ use l3gion::{
 use winit::{application::ApplicationHandler, event::WindowEvent, window::Window};
 
 struct RendererData {
-    texture: LgTexture,
+    _texture: LgTexture,
     shader: LgShader,
     tex_bind_group: LgShaderBindGroup,
 }
@@ -58,12 +58,10 @@ impl AppCore {
             })])
             .build(&renderer);
 
-        let img_tex = image::load_from_memory_with_format(
-            include_bytes!("../../image.png"),
-            image::ImageFormat::Png,
-        )
-        .unwrap()
-        .to_rgba8();
+        let img = BufReader::new(File::open("image.png").unwrap());
+        let img_tex = image::load(img, image::ImageFormat::Png)
+            .unwrap()
+            .to_rgba8();
 
         let texture = LgTextureBuilder::from_specs(
             wgpu::TextureDescriptor {
@@ -111,7 +109,7 @@ impl AppCore {
             .build(&renderer);
 
         let data = RendererData {
-            texture,
+            _texture: texture,
             shader,
             tex_bind_group,
         };
@@ -139,12 +137,7 @@ impl AppCore {
                 view: &surface_texture.texture.create_view(&Default::default()),
                 resolve_target: None,
                 ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(wgpu::Color {
-                        r: 0.1,
-                        g: 0.1,
-                        b: 0.1,
-                        a: 1.0,
-                    }),
+                    load: wgpu::LoadOp::Clear(wgpu::Color::GREEN),
                     store: wgpu::StoreOp::Store,
                 },
                 depth_slice: None,

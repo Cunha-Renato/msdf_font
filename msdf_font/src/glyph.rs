@@ -18,7 +18,7 @@ impl Default for GlyphBuilder {
             px_range: 2,
             max_angle: 3.0,
             field_type: FieldType::default(),
-            overlapping: true,
+            overlapping: false,
             fix_geometry: false,
         }
     }

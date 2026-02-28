@@ -119,6 +119,49 @@ impl Shape {
                         contour.edges[(corner + i) % m].color =
                             colors[1 + symmetrical_trichotomy(i, m)];
                     }
+                } else if !contour.edges.is_empty() {
+                    let first_thirds = contour.edges[0].split_in_thirds();
+                    let mut parts: [Edge; 6];
+
+                    if contour.edges.len() >= 2 {
+                        let second_thirds = contour.edges[1].split_in_thirds();
+
+                        parts = if corner == 0 {
+                            [
+                                first_thirds[0],  // color[0]
+                                first_thirds[1],  // color[0]
+                                first_thirds[2],  // color[1]
+                                second_thirds[0], // color[1]
+                                second_thirds[1], // color[2]
+                                second_thirds[2], // color[2]
+                            ]
+                        } else {
+                            [
+                                second_thirds[0], // color[0]
+                                second_thirds[1], // color[0]
+                                second_thirds[2], // color[1]
+                                first_thirds[0],  // color[1]
+                                first_thirds[1],  // color[2]
+                                first_thirds[2],  // color[2]
+                            ]
+                        };
+
+                        parts[0].color = colors[0];
+                        parts[1].color = colors[0];
+                        parts[2].color = colors[1];
+                        parts[3].color = colors[1];
+                        parts[4].color = colors[2];
+                        parts[5].color = colors[2];
+
+                        contour.edges = parts.into();
+                    } else {
+                        let [mut a, mut b, mut c] = first_thirds;
+                        a.color = colors[0];
+                        b.color = colors[1];
+                        c.color = colors[2];
+
+                        contour.edges = vec![a, b, c];
+                    }
                 }
             } else {
                 let corner_count = corners.len();

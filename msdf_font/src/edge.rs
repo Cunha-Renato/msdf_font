@@ -43,17 +43,27 @@ pub(crate) struct Edge {
 impl Edge {
     #[inline]
     pub(crate) const fn new_line(p0: DVec2, p1: DVec2) -> Self {
+        Self::new_line_color(p0, p1, EdgeColor::White)
+    }
+
+    #[inline]
+    pub(crate) const fn new_line_color(p0: DVec2, p1: DVec2, color: EdgeColor) -> Self {
         Self {
             etype: EdgeType::Line { p0, p1 },
-            color: EdgeColor::White,
+            color,
         }
     }
 
     #[inline]
     pub(crate) const fn new_quad(p0: DVec2, p1: DVec2, p2: DVec2) -> Self {
+        Self::new_quad_color(p0, p1, p2, EdgeColor::White)
+    }
+
+    #[inline]
+    pub(crate) const fn new_quad_color(p0: DVec2, p1: DVec2, p2: DVec2, color: EdgeColor) -> Self {
         Self {
             etype: EdgeType::Quad { p0, p1, p2 },
-            color: EdgeColor::White,
+            color,
         }
     }
 
@@ -174,6 +184,31 @@ impl Edge {
                     }
                 }
             }
+        }
+    }
+
+    pub(crate) fn split_in_thirds(&self) -> [Self; 3] {
+        const THIRD: f64 = 1.0 / 3.0;
+        const TWO_THIRDS: f64 = 2.0 / 3.0;
+        let pt = self.point(THIRD);
+        let ptt = self.point(TWO_THIRDS);
+
+        match self.etype {
+            EdgeType::Line { p0, p1 } => [
+                Self::new_line_color(p0, pt, self.color),
+                Self::new_line_color(pt, ptt, self.color),
+                Self::new_line_color(ptt, p1, self.color),
+            ],
+            EdgeType::Quad { p0, p1, p2 } => [
+                Self::new_quad_color(p0, p0.lerp(p1, THIRD), pt, self.color),
+                Self::new_quad_color(
+                    pt,
+                    p0.lerp(p1, 5.0 / 9.0).lerp(p1.lerp(p2, 4.0 / 9.0), 0.5),
+                    ptt,
+                    self.color,
+                ),
+                Self::new_quad_color(ptt, p1.lerp(p2, TWO_THIRDS), p2, self.color),
+            ],
         }
     }
 }

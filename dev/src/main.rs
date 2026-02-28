@@ -1,7 +1,7 @@
 mod app;
 
 use msdf_font::{
-    BitmapImageType, FieldType, GlyphBuilder, GlyphExt,
+    BitmapImageType, FieldType, GlyphBuilder,
     ttf_parser::{self, GlyphId},
 };
 
@@ -11,16 +11,16 @@ fn main() {
     } else {
         return;
     };
-    let glyph_ids = ['A', 'B', 'C', '&'].map(|c| face.glyph_index(c).unwrap_or(GlyphId(0)));
+    let glyph_ids = ['A', 'j', 'B', 'C', '&'].map(|c| face.glyph_index(c).unwrap_or(GlyphId(0)));
 
     let atlas = GlyphBuilder::default()
         // .field_type(FieldType::Sdf)
-        .field_type(FieldType::Msdf(2.0))
+        .field_type(FieldType::Msdf(3.0))
         .overlapping(false)
         .fix_geometry(false)
-        .px_range(1)
-        .px_size(20)
-        .build(&face, glyph_ids[0]);
+        .px_range(2)
+        .px_size(38)
+        .build(&face, glyph_ids[4]);
     // .build_atlas(&face, &[glyph_ids[1]]);
 
     println!(

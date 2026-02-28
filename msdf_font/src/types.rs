@@ -50,7 +50,7 @@ impl BitmapData {
         }
     }
 
-    pub(crate) fn set_px(&mut self, px: &[u8], mut x: usize, mut y: usize) {
+    pub fn set_px(&mut self, px: &[u8], mut x: usize, mut y: usize) {
         match self.image_type {
             BitmapImageType::L8 => self.bytes[y * self.width + x] = px[0],
             BitmapImageType::Rgb8 => {
@@ -60,6 +60,18 @@ impl BitmapData {
                 self.bytes[y + x] = px[0];
                 self.bytes[y + x + 1] = px[1];
                 self.bytes[y + x + 2] = px[2];
+            }
+        }
+    }
+
+    pub fn get_px(&self, mut x: usize, mut y: usize, f: impl FnOnce(&[u8])) {
+        match self.image_type {
+            BitmapImageType::L8 => f(&[self.bytes[y * self.width + x]]),
+            BitmapImageType::Rgb8 => {
+                x *= 3;
+                y *= self.width * 3;
+
+                f(&self.bytes[(y + x)..=(y + x + 2)]);
             }
         }
     }

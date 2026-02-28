@@ -13,4 +13,10 @@ mod utils;
 pub use glyph::*;
 pub use ttf_parser;
 pub use types::*;
+
+#[cfg(feature = "atlas")]
+mod atlas;
+#[cfg(feature = "atlas")]
+pub use atlas::*;
+
 pub(crate) use utils::{Vec2Ext, bound_point, median};

@@ -4,11 +4,11 @@ use ttf_parser::Face;
 
 #[derive(Debug)]
 pub struct GlyphBuilder {
-    px_size: u32,
-    px_range: u32,
-    max_angle: f64,
-    field_type: FieldType,
-    overlapping: bool,
+    pub(crate) px_size: u32,
+    pub(crate) px_range: u32,
+    pub(crate) max_angle: f64,
+    pub(crate) field_type: FieldType,
+    pub(crate) overlapping: bool,
 }
 impl Default for GlyphBuilder {
     fn default() -> Self {
@@ -52,13 +52,32 @@ impl GlyphBuilder {
         self
     }
 
+    #[inline]
+    pub fn get_scale(&self, face: &Face) -> f64 {
+        f64::from(self.px_size) / f64::from(face.units_per_em())
+    }
+
     #[must_use]
     pub fn build(self, face: &Face, glyph_id: ttf_parser::GlyphId) -> Glyph {
-        let scale = f64::from(self.px_size) / f64::from(face.units_per_em());
+        let scale = self.get_scale(face);
         let px_range = f64::from(self.px_range);
         let mut shape = Shape::new(scale);
         face.outline_glyph(glyph_id, &mut shape);
 
+        Glyph::new(shape, px_range, self.overlapping, self.field_type)
+    }
+}
+
+pub struct Glyph {
+    pub bitmap_data: BitmapData,
+}
+impl Glyph {
+    pub(crate) fn new(
+        shape: Shape,
+        px_range: f64,
+        overlapping: bool,
+        field_type: FieldType,
+    ) -> Self {
         let mut bounds = shape.bounds();
         bounds.min -= DVec2::splat(px_range);
         bounds.max += DVec2::splat(px_range);
@@ -70,16 +89,12 @@ impl GlyphBuilder {
             px_range,
             offset: bounds.min,
             bitmap_size: (width, height),
-            overlapping: self.overlapping,
-            field_type: self.field_type,
+            overlapping,
+            field_type,
         };
 
         Glyph {
             bitmap_data: shape.generate_bitmap(config),
         }
     }
-}
-
-pub struct Glyph {
-    pub bitmap_data: BitmapData,
 }

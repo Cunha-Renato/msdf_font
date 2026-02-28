@@ -34,7 +34,9 @@ impl GlyphExt for GlyphBuilder {
             })
             .collect::<(Vec<_>, Vec<_>)>();
 
-        let (packed, p_width, p_height) = packer::pack_rects(&sizes);
+        let packer = packer::Packer::pack(sizes);
+
+        let (packed, p_width, p_height) = (packer.rects, packer.width, packer.height);
         let mut bitmap = BitmapDataBuilder {
             width: p_width,
             height: p_height,

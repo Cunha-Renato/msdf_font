@@ -137,7 +137,7 @@ impl AppCore {
                 view: &surface_texture.texture.create_view(&Default::default()),
                 resolve_target: None,
                 ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(wgpu::Color::GREEN),
+                    load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
                     store: wgpu::StoreOp::Store,
                 },
                 depth_slice: None,

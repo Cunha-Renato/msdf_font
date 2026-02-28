@@ -10,13 +10,13 @@ struct VertexOutput {
 
 
 var<private> VERTICES: array<Vertex, 6> = array<Vertex, 6>(
-    Vertex(vec2<f32>(-0.9, -0.9), vec2<f32>(0.0, 1.0)),
-    Vertex(vec2<f32>( 0.9, -0.9), vec2<f32>(1.0, 1.0)),
-    Vertex(vec2<f32>(-0.9,  0.9), vec2<f32>(0.0, 0.0)),
+    Vertex(vec2<f32>(-0.8, -0.8), vec2<f32>(0.0, 1.0)),
+    Vertex(vec2<f32>( 0.8, -0.8), vec2<f32>(1.0, 1.0)),
+    Vertex(vec2<f32>(-0.8,  0.8), vec2<f32>(0.0, 0.0)),
 
-    Vertex(vec2<f32>(-0.9,  0.9), vec2<f32>(0.0, 0.0)),
-    Vertex(vec2<f32>( 0.9, -0.9), vec2<f32>(1.0, 1.0)),
-    Vertex(vec2<f32>( 0.9,  0.9), vec2<f32>(1.0, 0.0)),
+    Vertex(vec2<f32>(-0.8,  0.8), vec2<f32>(0.0, 0.0)),
+    Vertex(vec2<f32>( 0.8, -0.8), vec2<f32>(1.0, 1.0)),
+    Vertex(vec2<f32>( 0.8,  0.8), vec2<f32>(1.0, 0.0)),
 );
 
 @vertex
@@ -46,7 +46,7 @@ fn sqr(x: vec2<f32>) -> vec2<f32> {
 }
 
 fn screen_px_range(tex_coord: vec2<f32>) -> f32 {
-    let px_range = 2.0;
+    let px_range = 4.0;
     let vpx = vec2(px_range);
     let vtd = vec2<f32>(textureDimensions(u_tex_color, 0));
     let unit_range = vpx / vtd;
@@ -57,7 +57,7 @@ fn screen_px_range(tex_coord: vec2<f32>) -> f32 {
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    let px_range = 2.0;
+    let px_range = 4.0;
     let bitmap_size = vec2<f32>(textureDimensions(u_tex_color, 0));
     let uv_min = vec2(px_range) / bitmap_size;
     let uv_max = vec2(1.0) - vec2(px_range) / bitmap_size;
@@ -72,6 +72,6 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let fg_color = vec4(1.0, 1.0, 1.0, 1.0);
     let bg_color = vec4(0.0, 0.0, 0.0, 1.0);
 
-    return mix(bg_color, fg_color, opacity);
-    // return vec4(msd, 1.0);
+    // return mix(bg_color, fg_color, opacity);
+    return vec4(1.0, 1.0, 1.0, opacity);
 }

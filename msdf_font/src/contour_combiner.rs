@@ -5,7 +5,7 @@ use crate::{
 };
 use glam::DVec2;
 
-pub(crate) trait ContourCombiner<E: EdgeSelector> {
+pub(crate) trait ContourCombiner<E: EdgeSelector>: Send + Sync {
     fn new(shape: &Shape) -> Self;
     fn reset(&mut self, p: DVec2);
     fn edge_selector(&mut self, index: usize) -> &mut E;

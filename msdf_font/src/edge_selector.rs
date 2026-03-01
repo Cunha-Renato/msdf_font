@@ -39,7 +39,7 @@ impl EdgeSelectorDistance for MultiDistance {
     }
 }
 
-pub(crate) trait EdgeSelector: Default + Clone {
+pub(crate) trait EdgeSelector: Default + Clone + Send + Sync {
     type Distance: EdgeSelectorDistance;
 
     fn reset(&mut self, p: DVec2);

@@ -65,20 +65,28 @@ impl GlyphBuilder {
         f64::from(self.px_size) / f64::from(face.units_per_em())
     }
 
-    #[must_use]
-    pub fn build(self, face: &Face, glyph_id: GlyphId) -> Glyph {
-        let scale = self.get_scale(face);
-        let px_range = f64::from(self.px_range);
+    #[inline]
+    pub fn get_unit_scale(&self, face: &Face) -> f32 {
+        1.0 / f32::from(face.units_per_em())
+    }
 
-        Glyph::new(
+    #[must_use]
+    pub fn build(self, face: &Face, c: char) -> Option<Glyph> {
+        let scale = self.get_scale(face);
+        let unit_scale = self.get_unit_scale(face);
+        let px_range = f64::from(self.px_range);
+        let glyph_id = face.glyph_index(c)?;
+
+        Some(Glyph::new(
             face,
             glyph_id,
             scale,
+            unit_scale,
             px_range,
             self.field_type,
             self.overlapping,
             self.fix_geometry,
-        )
+        ))
     }
 }
 
@@ -91,12 +99,12 @@ impl Glyph {
         face: &Face,
         glyph_id: GlyphId,
         scale: f64,
+        unit_scale: f32,
         px_range: f64,
         field_type: FieldType,
         overlapping: bool,
         fix_geometry: bool,
     ) -> Self {
-        let unit_scale = 1.0 / f32::from(face.units_per_em());
         let mut shape = Shape::new(scale);
         face.outline_glyph(glyph_id, &mut shape);
 

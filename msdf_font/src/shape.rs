@@ -18,6 +18,8 @@ use i_overlay::{
     core::{fill_rule::FillRule, overlay::ContourDirection},
     float::{overlay::OverlayOptions, simplify::SimplifyShape},
 };
+#[cfg(feature = "rayon")]
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use ttf_parser::OutlineBuilder;
 
 #[derive(Debug)]
@@ -259,6 +261,9 @@ impl Shape {
                     return None;
                 }
 
+                #[cfg(feature = "rayon")]
+                let pts: Vec<[f64; 2]> = contour.edges.par_iter().flat_map(flatten_edge).collect();
+                #[cfg(not(feature = "rayon"))]
                 let pts: Vec<[f64; 2]> = contour.edges.iter().flat_map(flatten_edge).collect();
 
                 if pts.len() < 3 {
@@ -288,10 +293,6 @@ impl Shape {
             return;
         }
 
-        // Rebuild contours from the result.
-        // result is Vec<Shape> where Shape = Vec<Contour>
-        // First contour of each shape = outer boundary (CCW)
-        // Subsequent contours = holes (CW)
         self.contours.clear();
 
         for shape in result {

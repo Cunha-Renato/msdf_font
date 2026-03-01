@@ -15,11 +15,12 @@ fn main() {
         // .field_type(FieldType::Sdf)
         .field_type(FieldType::Msdf(3.0))
         .overlapping(true)
-        .fix_geometry(true)
+        .fix_geometry(false)
         .px_range(2)
-        .px_size(32)
+        .px_size(38)
         // .build(&face, glyph_ids[4]);
-        .build_atlas(&face, &chars[0..50]);
+        .build_atlas(&face, &chars)
+        .unwrap();
 
     println!(
         "({}, {})",
@@ -27,8 +28,8 @@ fn main() {
     );
 
     for (c, gdata) in atlas.glyph_table {
-        println!("----------- Data for {c} -------");
-        println!("{gdata:#?}");
+        // println!("----------- Data for {c} -------");
+        // println!("{gdata:#?}");
     }
 
     let _ = image::save_buffer(
@@ -43,6 +44,6 @@ fn main() {
     )
     .is_ok();
 
-    let el = winit::event_loop::EventLoop::new().unwrap();
-    el.run_app(&mut crate::app::App::default()).unwrap();
+    // let el = winit::event_loop::EventLoop::new().unwrap();
+    // el.run_app(&mut crate::app::App::default()).unwrap();
 }

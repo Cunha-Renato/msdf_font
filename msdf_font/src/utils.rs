@@ -70,8 +70,6 @@ fn quad_flatten_steps(p0: DVec2, p1: DVec2, p2: DVec2) -> usize {
     const MIN_STEPS: usize = 4;
     const MAX_STEPS: usize = 32;
 
-    // Max deviation of a quadratic bezier from a straight line is:
-    // deviation = 0.25 * |p1 - 0.5*(p0+p2)|
     let mid = (p0 + p2) * 0.5;
     let deviation = (p1 - mid).length() * 0.25;
 
@@ -79,8 +77,6 @@ fn quad_flatten_steps(p0: DVec2, p1: DVec2, p2: DVec2) -> usize {
         return MIN_STEPS;
     }
 
-    // Number of steps needed so that each chord is within tolerance:
-    // steps = sqrt(deviation / tolerance)  (from standard subdivision formula)
     let steps = (deviation / TOLERANCE).sqrt().ceil() as usize;
     steps.clamp(MIN_STEPS, MAX_STEPS)
 }

@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-msdf_font = { workspace = true, features = ["atlas"] }
+msdf_font = { workspace = true, features = ["atlas", "rayon"] }
 image.workspace = true
 l3gion.workspace = true
 winit.workspace = true

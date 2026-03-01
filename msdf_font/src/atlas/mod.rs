@@ -1,8 +1,7 @@
 mod packer;
 
-use rayon::iter::IntoParallelIterator;
 #[cfg(feature = "rayon")]
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
 use crate::{BitmapData, BitmapDataBuilder, Glyph, GlyphBuilder, GlyphData};
 use std::collections::HashMap;
@@ -37,7 +36,7 @@ impl GlyphExt for GlyphBuilder {
         #[cfg(feature = "rayon")]
         let glyph_id_iter = glyph_ids.into_par_iter();
         #[cfg(not(feature = "rayon"))]
-        let glyph_id_iter = glyph_ids.iter();
+        let glyph_id_iter = glyph_ids.into_iter();
 
         let (sizes, glyphs) = glyph_id_iter
             .map(|gid| {

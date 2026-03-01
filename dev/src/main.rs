@@ -17,7 +17,7 @@ fn main() {
         .overlapping(true)
         .fix_geometry(false)
         .px_range(2)
-        .px_size(38)
+        .px_size(500)
         // .build(&face, glyph_ids[4]);
         .build_atlas(&face, &chars)
         .unwrap();

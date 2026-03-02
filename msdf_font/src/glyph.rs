@@ -3,18 +3,22 @@ use glam::DVec2;
 use ttf_parser::{Face, GlyphId};
 
 #[derive(Debug)]
-pub struct GlyphBuilder {
-    pub(crate) px_size: u32,
+pub struct GlyphBuilder<'a> {
+    pub(crate) face: &'a Face<'a>,
+    pub(crate) scale: f64,
     pub(crate) px_range: u32,
     pub(crate) max_angle: f64,
     pub(crate) field_type: FieldType,
     pub(crate) overlapping: bool,
     pub(crate) fix_geometry: bool,
 }
-impl Default for GlyphBuilder {
-    fn default() -> Self {
+impl<'a> GlyphBuilder<'a> {
+    pub fn new(face: &'a Face) -> Self {
+        let scale = scale_value(f64::from(16), face);
+
         Self {
-            px_size: 16,
+            face,
+            scale,
             px_range: 2,
             max_angle: 3.0,
             field_type: FieldType::default(),
@@ -22,11 +26,10 @@ impl Default for GlyphBuilder {
             fix_geometry: false,
         }
     }
-}
-impl GlyphBuilder {
+
     #[inline]
-    pub const fn px_size(mut self, px_size: u32) -> Self {
-        self.px_size = px_size;
+    pub fn px_size(mut self, px_size: u32) -> Self {
+        self.scale = scale_value(f64::from(px_size), self.face);
         self
     }
 
@@ -60,28 +63,15 @@ impl GlyphBuilder {
         self
     }
 
-    #[inline]
-    pub fn get_scale(&self, face: &Face) -> f64 {
-        f64::from(self.px_size) / f64::from(face.units_per_em())
-    }
-
-    #[inline]
-    pub fn get_unit_scale(&self, face: &Face) -> f32 {
-        1.0 / f32::from(face.units_per_em())
-    }
-
     #[must_use]
-    pub fn build(self, face: &Face, c: char) -> Option<Glyph> {
-        let scale = self.get_scale(face);
-        let unit_scale = self.get_unit_scale(face);
+    pub fn build(self, c: char) -> Option<Glyph> {
         let px_range = f64::from(self.px_range);
-        let glyph_id = face.glyph_index(c)?;
+        let glyph_id = self.face.glyph_index(c)?;
 
         Some(Glyph::new(
-            face,
+            self.face,
             glyph_id,
-            scale,
-            unit_scale,
+            self.scale,
             px_range,
             self.field_type,
             self.overlapping,
@@ -99,7 +89,6 @@ impl Glyph {
         face: &Face,
         glyph_id: GlyphId,
         scale: f64,
-        unit_scale: f32,
         px_range: f64,
         field_type: FieldType,
         overlapping: bool,
@@ -109,9 +98,9 @@ impl Glyph {
         face.outline_glyph(glyph_id, &mut shape);
 
         let mut bounds = shape.bounds();
-        let mut bounds_unit_scale = bounds;
-        bounds_unit_scale.min = (bounds_unit_scale.min / scale) * unit_scale as f64;
-        bounds_unit_scale.max = (bounds_unit_scale.max / scale) * unit_scale as f64;
+        let mut bounds_em = bounds;
+        bounds_em.min /= scale;
+        bounds_em.max /= scale;
 
         bounds.min -= DVec2::splat(px_range);
         bounds.max += DVec2::splat(px_range);
@@ -128,24 +117,18 @@ impl Glyph {
             fix_geometry,
         };
 
-        let hor_advance = face.glyph_hor_advance(glyph_id).unwrap_or(0) as f32 * unit_scale;
-        let ver_advance = face.glyph_ver_advance(glyph_id).unwrap_or(0) as f32 * unit_scale;
+        let hor_advance = face.glyph_hor_advance(glyph_id).unwrap_or(0) as f32;
+        let ver_advance = face.glyph_ver_advance(glyph_id).unwrap_or(0) as f32;
 
         let advance = (hor_advance, ver_advance);
 
-        let hor_bearing = face.glyph_hor_side_bearing(glyph_id).unwrap_or(0) as f32 * unit_scale;
-        let ver_bearing = face.glyph_ver_side_bearing(glyph_id).unwrap_or(0) as f32 * unit_scale;
+        let hor_bearing = face.glyph_hor_side_bearing(glyph_id).unwrap_or(0) as f32;
+        let ver_bearing = bounds_em.max.y as f32;
 
         let bearing = (hor_bearing, ver_bearing);
 
-        let bounds_min = (
-            bounds_unit_scale.min.x as f32,
-            bounds_unit_scale.min.y as f32,
-        );
-        let bounds_max = (
-            bounds_unit_scale.max.x as f32,
-            bounds_unit_scale.max.y as f32,
-        );
+        let bounds_min = (bounds_em.min.x as f32, bounds_em.min.y as f32);
+        let bounds_max = (bounds_em.max.x as f32, bounds_em.max.y as f32);
 
         Glyph {
             bitmap_data: shape.generate_bitmap(config),
@@ -159,4 +142,9 @@ impl Glyph {
             },
         }
     }
+}
+
+#[inline]
+fn scale_value(val: f64, face: &Face) -> f64 {
+    val / f64::from(face.units_per_em())
 }

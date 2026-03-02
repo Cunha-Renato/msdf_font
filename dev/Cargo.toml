@@ -9,6 +9,7 @@ image.workspace = true
 l3gion.workspace = true
 winit.workspace = true
 pollster.workspace = true
+bytemuck.workspace = true
 
 [lints]
 workspace = true

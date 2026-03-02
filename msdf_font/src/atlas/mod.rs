@@ -5,7 +5,6 @@ use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterato
 
 use crate::{BitmapData, BitmapDataBuilder, Glyph, GlyphBuilder, GlyphData};
 use std::collections::HashMap;
-use ttf_parser::Face;
 
 #[derive(Debug)]
 pub struct AtlasGlyphData {
@@ -15,53 +14,61 @@ pub struct AtlasGlyphData {
 }
 
 pub trait GlyphExt {
-    fn build_atlas(self, face: &Face, c: &[char]) -> Option<Atlas>;
+    fn build_atlas(self, c: &[char]) -> Option<Atlas>;
 }
 
-impl GlyphExt for GlyphBuilder {
-    fn build_atlas(self, face: &Face, c: &[char]) -> Option<Atlas> {
-        let (chars, glyph_ids) = c
-            .iter()
-            .filter_map(|c| face.glyph_index(*c).map(|gid| (*c, gid)))
-            .collect::<(Vec<_>, Vec<_>)>();
-
-        if glyph_ids.is_empty() {
-            return None;
-        }
-
-        let scale = self.get_scale(face);
-        let unit_scale = self.get_unit_scale(face);
+impl<'a> GlyphExt for GlyphBuilder<'a> {
+    fn build_atlas(self, c: &[char]) -> Option<Atlas> {
         let px_range = f64::from(self.px_range);
 
         #[cfg(feature = "rayon")]
-        let glyph_id_iter = glyph_ids.into_par_iter();
+        let char_iter = c.into_par_iter();
         #[cfg(not(feature = "rayon"))]
-        let glyph_id_iter = glyph_ids.into_iter();
+        let char_iter = c.into_iter();
 
-        let (sizes, glyphs) = glyph_id_iter
-            .map(|gid| {
-                let glyph = Glyph::new(
-                    face,
-                    gid,
-                    scale,
-                    unit_scale,
-                    px_range,
-                    self.field_type,
-                    self.overlapping,
-                    self.fix_geometry,
-                );
+        struct GlyphCharPair {
+            glyph: Glyph,
+            c: char,
+        }
 
-                ((glyph.bitmap_data.width, glyph.bitmap_data.height), glyph)
+        let (gc_pair, sizes) = char_iter
+            .filter_map(|c| {
+                let (size, gc_pair) = self.face.glyph_index(*c).map(|gid| {
+                    let glyph = Glyph::new(
+                        self.face,
+                        gid,
+                        self.scale,
+                        px_range,
+                        self.field_type,
+                        self.overlapping,
+                        self.fix_geometry,
+                    );
+
+                    (
+                        (glyph.bitmap_data.width, glyph.bitmap_data.height),
+                        GlyphCharPair { glyph, c: *c },
+                    )
+                })?;
+
+                if gc_pair.glyph.bitmap_data.bytes.is_empty() {
+                    None
+                } else {
+                    Some((gc_pair, size))
+                }
             })
             .collect::<(Vec<_>, Vec<_>)>();
+
+        if sizes.is_empty() {
+            return None;
+        }
 
         let packer = packer::Packer::pack(sizes);
 
         let (packed, p_width, p_height) = (packer.rects, packer.width, packer.height);
-        let mut bitmap = BitmapDataBuilder {
+        let mut bitmap_data = BitmapDataBuilder {
             width: p_width,
             height: p_height,
-            image_type: glyphs[0].bitmap_data.image_type,
+            image_type: gc_pair[0].glyph.bitmap_data.image_type,
         }
         .build();
 
@@ -69,23 +76,25 @@ impl GlyphExt for GlyphBuilder {
             .iter()
             .map(|p| {
                 (
-                    chars[p.index],
+                    gc_pair[p.index].c,
                     AtlasGlyphData {
                         offset: (p.x, p.y),
                         size: (
-                            glyphs[p.index].bitmap_data.width,
-                            glyphs[p.index].bitmap_data.height,
+                            gc_pair[p.index].glyph.bitmap_data.width,
+                            gc_pair[p.index].glyph.bitmap_data.height,
                         ),
-                        data: glyphs[p.index].glyph_data,
+                        data: gc_pair[p.index].glyph.glyph_data,
                     },
                 )
             })
             .collect();
 
-        write_atlas_bitmap(&mut bitmap, packed, glyphs);
+        let glyphs = gc_pair.into_iter().map(|gc| gc.glyph).collect();
+
+        write_atlas_bitmap(&mut bitmap_data, packed, glyphs);
 
         Some(Atlas {
-            bitmap_data: bitmap,
+            bitmap_data,
             glyph_table,
         })
     }

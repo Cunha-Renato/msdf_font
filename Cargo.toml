@@ -19,6 +19,7 @@ msdf_font.path = "msdf_font"
 winit = "0.30"
 l3gion.path = "../l3gion/l3gion"
 pollster = "0.4"
+bytemuck = "1.25"
 
 [workspace.lints.clippy]
 perf = "deny"

@@ -9,6 +9,7 @@ pub(crate) struct FontData {
     pub(crate) line_gap: f64,
     pub(crate) line_height: f64,
     pub(crate) units_per_em: f64,
+    pub(crate) px_range: f64,
     pub(crate) atlas_size: (f32, f32),
 }
 impl FontData {
@@ -19,13 +20,15 @@ impl FontData {
 
         let face = ttf_parser::Face::parse(&buf, 0).ok()?;
 
+        let px_range = 4;
         let chars = (0..=255u8).map(|u| u as char).collect::<Vec<_>>();
         let atlas = GlyphBuilder::new(&face)
             .field_type(FieldType::Msdf(3.0))
+            // .field_type(FieldType::Sdf)
             .overlapping(true)
             .fix_geometry(false)
-            .px_range(4)
-            .px_size(50)
+            .px_range(px_range)
+            .px_size(40)
             .build_atlas(&chars)?;
 
         let ascender = f64::from(face.ascender());
@@ -41,6 +44,7 @@ impl FontData {
                 line_gap,
                 line_height,
                 units_per_em: f64::from(face.units_per_em()),
+                px_range: px_range as f64,
                 atlas_size: (
                     atlas.bitmap_data.width as f32,
                     atlas.bitmap_data.height as f32,

@@ -59,7 +59,7 @@ impl Packer {
 
         Self {
             width,
-            height: next_y_pos,
+            height: next_y_pos.saturating_sub(Self::PADDING),
             rects: packed_rects,
         }
     }

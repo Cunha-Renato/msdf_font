@@ -11,7 +11,7 @@ struct InstanceInput {
 }
 
 struct VertexOutput {
-  @location(0) uv: vec2<f32>,
+  @location(0) uv:        vec2<f32>,
   @builtin(position) position: vec4<f32>,
 };
 
@@ -43,7 +43,7 @@ fn prepare_vertex(
   );
 
   let size_ndc = vec2<f32>(
-      pixel_size.x / u_locals.screen_size.x,
+      -pixel_size.x / u_locals.screen_size.x,
       pixel_size.y / u_locals.screen_size.y,
   );
 
@@ -78,18 +78,22 @@ fn vs_main(
 
 const px_range = 4.0;
 
-fn median(r: f32, g: f32, b: f32) -> f32 {
-  return max(min(r, g), min(max(r, g), b));
-}
-
 fn sqr(x: vec2<f32>) -> vec2<f32> {
   return x * x;
 }
 
-fn screen_px_range(tex_coord: vec2<f32>) -> f32 {
+fn median(r: f32, g: f32, b: f32) -> f32 {
+  return max(min(r, g), min(max(r, g), b));
+}
+
+fn unit_range(px_size: f32) -> vec2<f32> {
     let vpx = vec2(px_range);
     let vtd = vec2<f32>(textureDimensions(u_tex_color, 0));
-    let unit_range = vpx / vtd;
+    return vpx / vtd;
+}
+
+fn screen_px_range(tex_coord: vec2<f32>) -> f32 {
+    let unit_range = unit_range(px_range);
     let screen_tex_size = inverseSqrt(sqr(dpdx(tex_coord)) + sqr(dpdy(tex_coord)));
 
     return max(0.5 * dot(unit_range, screen_tex_size), 1.0);
@@ -102,8 +106,11 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let screen_px_distance = screen_px_range(in.uv) * (sd - 0.5);
     let opacity = clamp(screen_px_distance + 0.5, 0.0, 1.0);
 
-    let fg_color = vec4(1.0);
-    let bg_color = vec4(1.0, 0.0, 0.0, 1.0);
+    let fg_color = vec4(vec3(1.0), 1.0);
+    // let bg_color = vec4(msd, 1.0);
+    let bg_color = vec4(0.0);
 
     return mix(bg_color, fg_color, opacity);
+    // return vec4(1.0, 1.0, 1.0, opacity);
+    // return vec4(msd, 1.0);
 }

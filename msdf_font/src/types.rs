@@ -16,46 +16,23 @@ pub enum BitmapImageType {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct GlyphBounds {
-    pub min: (f32, f32),
-    pub max: (f32, f32),
+pub struct GlyphBounds<T: Copy> {
+    pub min: (T, T),
+    pub max: (T, T),
 }
-impl GlyphBounds {
+impl<T: Copy + std::ops::Sub<Output = T>> GlyphBounds<T> {
     #[inline]
-    pub const fn size(&self) -> (f32, f32) {
+    pub fn size(&self) -> (T, T) {
         (self.max.0 - self.min.0, self.max.1 - self.min.1)
-    }
-}
-impl std::ops::Add<f32> for GlyphBounds {
-    type Output = Self;
-
-    fn add(mut self, rhs: f32) -> Self::Output {
-        self.min.0 += rhs;
-        self.min.1 += rhs;
-        self.max.0 += rhs;
-        self.max.1 += rhs;
-
-        self
-    }
-}
-impl std::ops::Mul<f32> for GlyphBounds {
-    type Output = Self;
-
-    fn mul(mut self, rhs: f32) -> Self::Output {
-        self.min.0 *= rhs;
-        self.min.1 *= rhs;
-        self.max.0 *= rhs;
-        self.max.1 *= rhs;
-
-        self
     }
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct GlyphData {
-    pub advance: (f32, f32),
-    pub bearing: (f32, f32),
-    pub bounds: GlyphBounds,
+    pub plane_bounds: GlyphBounds<f32>,
+    pub em_bounds: GlyphBounds<i32>,
+    pub advance: (i32, i32),
+    pub bearing: (i32, i32),
 }
 
 #[derive(Debug)]

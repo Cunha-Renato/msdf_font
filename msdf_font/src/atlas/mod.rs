@@ -3,13 +3,12 @@ mod packer;
 #[cfg(feature = "rayon")]
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
-use crate::{BitmapData, BitmapDataBuilder, Glyph, GlyphBuilder, GlyphData};
+use crate::{BitmapData, BitmapDataBuilder, Glyph, GlyphBounds, GlyphBuilder, GlyphData};
 use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct AtlasGlyphData {
-    pub offset: (usize, usize),
-    pub size: (usize, usize),
+    pub atlas_bounds: GlyphBounds<f32>,
     pub data: GlyphData,
 }
 
@@ -75,15 +74,21 @@ impl<'a> GlyphExt for GlyphBuilder<'a> {
         let glyph_table = packed
             .iter()
             .map(|p| {
+                let gc_pair = &gc_pair[p.index];
+
+                let min = (p.x as f32, p.y as f32);
+                let max = (
+                    min.0 + gc_pair.glyph.bitmap_data.width as f32,
+                    min.1 + gc_pair.glyph.bitmap_data.height as f32,
+                );
+
+                let atlas_bounds = GlyphBounds { min, max };
+
                 (
-                    gc_pair[p.index].c,
+                    gc_pair.c,
                     AtlasGlyphData {
-                        offset: (p.x, p.y),
-                        size: (
-                            gc_pair[p.index].glyph.bitmap_data.width,
-                            gc_pair[p.index].glyph.bitmap_data.height,
-                        ),
-                        data: gc_pair[p.index].glyph.glyph_data,
+                        atlas_bounds,
+                        data: gc_pair.glyph.glyph_data,
                     },
                 )
             })

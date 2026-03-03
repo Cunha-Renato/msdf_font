@@ -233,34 +233,37 @@ impl AppCore {
                 depth_slice: None,
             })
             .build(&self.renderer);
-
+        let dpi = self.window.scale_factor();
         let text_size = 200.0;
-        let text = "Open Sans";
+        let scale = (text_size * dpi as f32) / self.font_data.units_per_em as f32;
+        let text = "AabBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVxXyYzZ.";
 
-        let scale = text_size / self.font_data.units_per_em as f32;
         let mut pos = [0.0, 300.0];
         let instances = text
             .chars()
             .filter_map(|c| {
                 self.font_data.glyph_table.get(&c).map(|g_data| {
-                    let size = g_data.data.bounds.size();
+                    let size = g_data.data.plane_bounds.size();
                     let size = (size.0 * scale, size.1 * scale);
 
                     let uv_offset = [
-                        g_data.offset.0 as f32 / self.font_data.atlas_size.0,
-                        g_data.offset.1 as f32 / self.font_data.atlas_size.1,
+                        g_data.atlas_bounds.min.0 as f32 / self.font_data.atlas_size.0,
+                        g_data.atlas_bounds.min.1 as f32 / self.font_data.atlas_size.1,
                     ];
+
                     let uv_size = [
-                        g_data.size.0 as f32 / self.font_data.atlas_size.0,
-                        g_data.size.1 as f32 / self.font_data.atlas_size.1,
+                        (g_data.atlas_bounds.max.0 as f32 / self.font_data.atlas_size.0)
+                            - uv_offset[0],
+                        (g_data.atlas_bounds.max.1 as f32 / self.font_data.atlas_size.1)
+                            - uv_offset[1],
                     ];
 
                     let position = [
-                        pos[0] + g_data.data.bearing.0 * scale,
-                        pos[1] - g_data.data.bearing.1 * scale,
+                        pos[0] + g_data.data.bearing.0 as f32 * scale,
+                        pos[1] - g_data.data.bearing.1 as f32 * scale,
                     ];
 
-                    pos[0] += g_data.data.advance.0 * scale;
+                    pos[0] += g_data.data.advance.0 as f32 * scale;
                     Instance {
                         position,
                         size: [size.0, size.1],

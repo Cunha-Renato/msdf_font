@@ -15,6 +15,72 @@ pub enum BitmapImageType {
     Rgb8,
 }
 
+pub trait BitmapData {
+    fn width(&self) -> usize;
+    fn height(&self) -> usize;
+    fn set_px(&mut self, px: &[u8], x: usize, y: usize);
+}
+
+#[derive(Debug)]
+pub struct GlyphBitmapData {
+    pub bytes: Vec<u8>,
+    pub width: usize,
+    pub height: usize,
+    pub image_type: BitmapImageType,
+}
+impl GlyphBitmapData {
+    pub(crate) fn new(width: usize, height: usize, image_type: BitmapImageType) -> Self {
+        let channels = match image_type {
+            BitmapImageType::L8 => 1,
+            BitmapImageType::Rgb8 => 3,
+        };
+
+        Self {
+            bytes: vec![0u8; width * height * channels],
+            width,
+            height,
+            image_type,
+        }
+    }
+}
+impl BitmapData for GlyphBitmapData {
+    #[inline]
+    fn width(&self) -> usize {
+        self.width
+    }
+
+    #[inline]
+    fn height(&self) -> usize {
+        self.height
+    }
+
+    fn set_px(&mut self, px: &[u8], mut x: usize, mut y: usize) {
+        match self.image_type {
+            BitmapImageType::L8 => self.bytes[y * self.width + x] = px[0],
+            BitmapImageType::Rgb8 => {
+                x *= 3;
+                y *= self.width * 3;
+
+                self.bytes[y + x] = px[0];
+                self.bytes[y + x + 1] = px[1];
+                self.bytes[y + x + 2] = px[2];
+            }
+        }
+    }
+
+    // fn get_px(&self, mut x: usize, mut y: usize, f: impl FnOnce(&[u8])) {
+    //     match self.image_type {
+    //         BitmapImageType::L8 => f(&[self.bytes[y * self.width + x]]),
+    //         BitmapImageType::Rgb8 => {
+    //             x *= 3;
+    //             y *= self.width * 3;
+
+    //             f(&self.bytes[(y + x)..=(y + x + 2)]);
+    //         }
+    //     }
+    // }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct GlyphBounds<T: Copy> {
     pub min: (T, T),
@@ -35,76 +101,20 @@ pub struct GlyphData {
     pub bearing: (i32, i32),
 }
 
-#[derive(Debug)]
-pub(crate) struct BitmapDataBuilder {
-    pub(crate) width: usize,
-    pub(crate) height: usize,
-    pub(crate) image_type: BitmapImageType,
-}
-impl BitmapDataBuilder {
-    #[inline]
-    pub(crate) fn build(self) -> BitmapData {
-        BitmapData::new(self.width, self.height, self.image_type)
-    }
-}
-
-#[derive(Debug)]
-pub struct BitmapData {
-    pub bytes: Vec<u8>,
-    pub width: usize,
-    pub height: usize,
-    pub image_type: BitmapImageType,
-}
-impl BitmapData {
-    fn new(width: usize, height: usize, image_type: BitmapImageType) -> Self {
-        let channels = match image_type {
-            BitmapImageType::L8 => 1,
-            BitmapImageType::Rgb8 => 3,
-        };
-
-        Self {
-            bytes: vec![0u8; width * height * channels],
-            width,
-            height,
-            image_type,
-        }
-    }
-
-    pub fn set_px(&mut self, px: &[u8], mut x: usize, mut y: usize) {
-        match self.image_type {
-            BitmapImageType::L8 => self.bytes[y * self.width + x] = px[0],
-            BitmapImageType::Rgb8 => {
-                x *= 3;
-                y *= self.width * 3;
-
-                self.bytes[y + x] = px[0];
-                self.bytes[y + x + 1] = px[1];
-                self.bytes[y + x + 2] = px[2];
-            }
-        }
-    }
-
-    pub fn get_px(&self, mut x: usize, mut y: usize, f: impl FnOnce(&[u8])) {
-        match self.image_type {
-            BitmapImageType::L8 => f(&[self.bytes[y * self.width + x]]),
-            BitmapImageType::Rgb8 => {
-                x *= 3;
-                y *= self.width * 3;
-
-                f(&self.bytes[(y + x)..=(y + x + 2)]);
-            }
-        }
-    }
-}
-
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct GenerationConfig {
     pub(crate) px_range: f64,
     pub(crate) offset: DVec2,
-    pub(crate) bitmap_size: (usize, usize),
     pub(crate) field_type: FieldType,
     pub(crate) overlapping: bool,
     pub(crate) fix_geometry: bool,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct BuildConfig {
+    pub(crate) glyph_data: GlyphData,
+    pub(crate) generation_config: GenerationConfig,
+    pub(crate) bitmap_size: (usize, usize),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

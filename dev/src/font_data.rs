@@ -1,6 +1,8 @@
-use std::{collections::HashMap, io::Read};
+use std::collections::HashMap;
 
-use msdf_font::{AtlasGlyphData, BitmapData, FieldType, GlyphBuilder, GlyphExt, ttf_parser};
+use msdf_font::{
+    AtlasBuilder, AtlasGlyphData, FieldType, GlyphBitmapData, GlyphBuilder, ttf_parser,
+};
 
 pub(crate) struct FontData {
     pub(crate) glyph_table: HashMap<char, AtlasGlyphData>,
@@ -13,13 +15,14 @@ pub(crate) struct FontData {
     pub(crate) atlas_size: (f32, f32),
 }
 impl FontData {
-    pub(crate) fn new(path: impl AsRef<std::path::Path>) -> Option<(Self, BitmapData)> {
-        let mut file = std::fs::File::open(path).ok()?;
-        let mut buf = Vec::new();
-        file.read_to_end(&mut buf).ok()?;
+    pub(crate) fn new(path: impl AsRef<std::path::Path>) -> Option<(Self, GlyphBitmapData)> {
+        // let mut file = std::fs::File::open(path).ok()?;
+        // let mut buf = Vec::new();
+        // file.read_to_end(&mut buf).ok()?;
 
-        let face = ttf_parser::Face::parse(&buf, 0).ok()?;
+        // let face = ttf_parser::Face::parse(&buf, 0).ok()?;
 
+        let face = ttf_parser::Face::parse(include_bytes!("../../OpenSans.ttf"), 0).ok()?;
         let px_range = 4;
         let chars = (0..=255u8).map(|u| u as char).collect::<Vec<_>>();
         let atlas = GlyphBuilder::new(&face)
@@ -28,7 +31,7 @@ impl FontData {
             .overlapping(true)
             .fix_geometry(false)
             .px_range(px_range)
-            .px_size(40)
+            .px_size(100)
             .build_atlas(&chars)?;
 
         let ascender = f64::from(face.ascender());

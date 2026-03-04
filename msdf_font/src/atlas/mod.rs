@@ -1,9 +1,12 @@
+mod atlas_bitmap_data;
 mod packer;
 
+use crate::{
+    BitmapImageType, BuildConfig, FieldType, GlyphBitmapData, GlyphBounds, GlyphBuilder, GlyphData,
+    atlas::atlas_bitmap_data::BitmapDataRegion, shape::Shape,
+};
 #[cfg(feature = "rayon")]
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
-
-use crate::{BitmapData, BitmapDataBuilder, Glyph, GlyphBounds, GlyphBuilder, GlyphData};
 use std::collections::HashMap;
 
 #[derive(Debug)]
@@ -12,91 +15,78 @@ pub struct AtlasGlyphData {
     pub data: GlyphData,
 }
 
-pub trait GlyphExt {
+pub trait AtlasBuilder {
     fn build_atlas(self, c: &[char]) -> Option<Atlas>;
 }
-
-impl<'a> GlyphExt for GlyphBuilder<'a> {
+impl<'a> AtlasBuilder for GlyphBuilder<'a> {
     fn build_atlas(self, c: &[char]) -> Option<Atlas> {
-        let px_range = f64::from(self.px_range);
+        let image_type = match &self.field_type {
+            FieldType::Msdf(_) => BitmapImageType::Rgb8,
+            FieldType::Sdf => BitmapImageType::L8,
+        };
 
-        #[cfg(feature = "rayon")]
-        let char_iter = c.into_par_iter();
-        #[cfg(not(feature = "rayon"))]
-        let char_iter = c.into_iter();
-
-        struct GlyphCharPair {
-            glyph: Glyph,
+        struct ShapeConfig {
+            config: BuildConfig,
+            shape: Shape,
             c: char,
         }
 
-        let (gc_pair, sizes) = char_iter
+        let mut shape_configs = c
+            .iter()
             .filter_map(|c| {
-                let (size, gc_pair) = self.face.glyph_index(*c).map(|gid| {
-                    let glyph = Glyph::new(
-                        self.face,
-                        gid,
-                        self.scale,
-                        px_range,
-                        self.field_type,
-                        self.overlapping,
-                        self.fix_geometry,
-                    );
+                let mut shape = Shape::new(self.scale);
+                let config = self.prepare_for_build(&mut shape, *c)?;
 
-                    (
-                        (glyph.bitmap_data.width, glyph.bitmap_data.height),
-                        GlyphCharPair { glyph, c: *c },
-                    )
-                })?;
-
-                if gc_pair.glyph.bitmap_data.bytes.is_empty() {
-                    None
-                } else {
-                    Some((gc_pair, size))
-                }
+                Some(ShapeConfig {
+                    config,
+                    shape,
+                    c: *c,
+                })
             })
-            .collect::<(Vec<_>, Vec<_>)>();
+            .collect::<Vec<_>>();
 
-        if sizes.is_empty() {
+        if shape_configs.is_empty() {
             return None;
         }
 
-        let packer = packer::Packer::pack(sizes);
+        let packer = packer::Packer::pack(&mut shape_configs, |sc| sc.config.bitmap_size);
 
-        let (packed, p_width, p_height) = (packer.rects, packer.width, packer.height);
-        let mut bitmap_data = BitmapDataBuilder {
-            width: p_width,
-            height: p_height,
-            image_type: gc_pair[0].glyph.bitmap_data.image_type,
-        }
-        .build();
+        let mut bitmap_data = GlyphBitmapData::new(packer.width, packer.height, image_type);
 
-        let glyph_table = packed
-            .iter()
-            .map(|p| {
-                let gc_pair = &gc_pair[p.index];
+        let glyph_table = shape_configs
+            .into_iter()
+            .zip(packer.rects.into_iter())
+            .map(|(sc, packer)| {
+                let shape = sc.shape;
+                let config = sc.config;
 
-                let min = (p.x as f32, p.y as f32);
+                let mut bitmap_region = BitmapDataRegion {
+                    data: &mut bitmap_data,
+                    x: packer.x,
+                    y: packer.y,
+                    width: config.bitmap_size.0,
+                    height: config.bitmap_size.1,
+                };
+
+                shape.generate_bitmap(config.generation_config, &mut bitmap_region);
+
+                let min = (packer.x as f32, packer.y as f32);
                 let max = (
-                    min.0 + gc_pair.glyph.bitmap_data.width as f32,
-                    min.1 + gc_pair.glyph.bitmap_data.height as f32,
+                    min.0 + bitmap_region.width as f32,
+                    min.1 + bitmap_region.height as f32,
                 );
 
                 let atlas_bounds = GlyphBounds { min, max };
 
                 (
-                    gc_pair.c,
+                    sc.c,
                     AtlasGlyphData {
                         atlas_bounds,
-                        data: gc_pair.glyph.glyph_data,
+                        data: config.glyph_data,
                     },
                 )
             })
             .collect();
-
-        let glyphs = gc_pair.into_iter().map(|gc| gc.glyph).collect();
-
-        write_atlas_bitmap(&mut bitmap_data, packed, glyphs);
 
         Some(Atlas {
             bitmap_data,
@@ -106,49 +96,6 @@ impl<'a> GlyphExt for GlyphBuilder<'a> {
 }
 
 pub struct Atlas {
-    pub bitmap_data: BitmapData,
+    pub bitmap_data: GlyphBitmapData,
     pub glyph_table: HashMap<char, AtlasGlyphData>,
-}
-
-#[cfg(not(feature = "rayon"))]
-fn write_atlas_bitmap(
-    bitmap: &mut BitmapData,
-    packed: Vec<packer::PackedRect>,
-    glyphs: Vec<Glyph>,
-) {
-    for packed in packed {
-        let glyph_data = &glyphs[packed.index].bitmap_data;
-
-        for y in 0..glyph_data.height {
-            for x in 0..glyph_data.width {
-                let atlas_x = x + packed.x;
-                let atlas_y = y + packed.y;
-
-                glyph_data.get_px(x, y, |px| bitmap.set_px(px, atlas_x, atlas_y));
-            }
-        }
-    }
-}
-
-#[cfg(feature = "rayon")]
-fn write_atlas_bitmap(
-    bitmap: &mut BitmapData,
-    packed: Vec<packer::PackedRect>,
-    glyphs: Vec<Glyph>,
-) {
-    let bp = bitmap as *mut BitmapData as usize;
-
-    packed.par_iter().for_each(|packed| {
-        let bitmap = unsafe { &mut *(bp as *mut BitmapData) };
-        let glyph_data = &glyphs[packed.index].bitmap_data;
-
-        for y in 0..glyph_data.height {
-            for x in 0..glyph_data.width {
-                let atlas_x = x + packed.x;
-                let atlas_y = y + packed.y;
-
-                glyph_data.get_px(x, y, |px| bitmap.set_px(px, atlas_x, atlas_y));
-            }
-        }
-    });
 }

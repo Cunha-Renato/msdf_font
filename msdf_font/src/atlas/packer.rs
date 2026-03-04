@@ -2,7 +2,6 @@
 pub(super) struct PackedRect {
     pub(super) x: usize,
     pub(super) y: usize,
-    pub(super) index: usize,
 }
 
 pub(super) struct Packer {
@@ -14,22 +13,27 @@ impl Packer {
     // Padding in px for x and y;
     const PADDING: usize = 1;
 
-    pub(super) fn pack(rects: Vec<(usize, usize)>) -> Self {
+    pub(super) fn pack<T>(data: &mut [T], size_fn: impl Fn(&T) -> (usize, usize)) -> Self {
         let mut total_area = 0;
 
-        // Indexing the rects.
-        let mut rects_indexed = rects
-            .into_iter()
-            .enumerate()
-            .map(|(i, (w, h))| {
-                total_area += w * h;
+        // Sort by area.
+        data.sort_by(|a, b| {
+            let size_a = size_fn(a);
+            let size_b = size_fn(b);
 
-                (i, w, h)
+            (size_b.0 * size_b.1).cmp(&(size_a.0 * size_a.1))
+        });
+
+        // Indexing the rects.
+        let rects_indexed = data
+            .iter()
+            .map(|data| {
+                let size = size_fn(data);
+                total_area += size.0 * size.1;
+
+                (size.0, size.1)
             })
             .collect::<Vec<_>>();
-
-        // Sort by area.
-        rects_indexed.sort_by(|a, b| (b.1 * b.2).cmp(&(a.1 * a.2)));
 
         let width = (total_area as f64).sqrt().ceil() as usize;
 
@@ -38,7 +42,7 @@ impl Packer {
         let mut next_y_pos = 0;
         let packed_rects = rects_indexed
             .into_iter()
-            .map(|(i, w, h)| {
+            .map(|(w, h)| {
                 if x_cursor + w > width {
                     x_cursor = 0;
                     y_cursor = next_y_pos;
@@ -47,7 +51,6 @@ impl Packer {
                 let result = PackedRect {
                     x: x_cursor,
                     y: y_cursor,
-                    index: i,
                 };
 
                 x_cursor += w + Self::PADDING;

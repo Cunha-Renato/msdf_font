@@ -1,5 +1,5 @@
 use crate::{
-    BitmapData, BitmapDataBuilder, BitmapImageType, Bounds, FieldType, GenerationConfig,
+    BitmapData, Bounds, FieldType, GenerationConfig,
     contour::Contour,
     contour_combiner::{ContourCombiner, OverlappingContourCombiner, SimpleContourCombiner},
     edge::{Edge, EdgeColor},
@@ -47,32 +47,24 @@ impl Shape {
         bounds
     }
 
-    pub(crate) fn generate_bitmap(mut self, config: GenerationConfig) -> BitmapData {
+    pub(crate) fn generate_bitmap(
+        mut self,
+        config: GenerationConfig,
+        bitmap: &mut impl BitmapData,
+    ) {
         if config.fix_geometry {
             self.resolve_shape_geometry();
         }
 
-        let mut bitmap_builder = BitmapDataBuilder {
-            width: config.bitmap_size.0,
-            height: config.bitmap_size.1,
-            image_type: BitmapImageType::L8,
-        };
-
         let func = match config.field_type {
             FieldType::Msdf(max_angle) => {
-                bitmap_builder.image_type = BitmapImageType::Rgb8;
-
                 self.simple_coloring(f64::from(max_angle), 0);
                 Self::generate_msdf
             }
             FieldType::Sdf => Self::generate_sdf,
         };
 
-        let mut bitmap = bitmap_builder.build();
-
-        func(self, config, &mut bitmap);
-
-        bitmap
+        func(self, config, bitmap);
     }
 
     fn simple_coloring(&mut self, angle_treshold: f64, mut seed: usize) {
@@ -195,16 +187,16 @@ impl Shape {
 
     fn generate_distance_field<E: EdgeSelector, C: ContourCombiner<E>>(
         self,
-        bitmap: &mut BitmapData,
+        bitmap: &mut impl BitmapData,
         px_range: f64,
         offset: DVec2,
     ) {
         let contour_combiner = C::new(&self);
         let mut shape_distance_finder = ShapeDistanceFinder::new(&self, contour_combiner);
-        for y in 0..bitmap.height {
-            for x in 0..bitmap.width {
+        for y in 0..bitmap.height() {
+            for x in 0..bitmap.width() {
                 let p =
-                    DVec2::new(x as f64 + 0.5, bitmap.height as f64 - (y as f64 + 0.5)) + offset;
+                    DVec2::new(x as f64 + 0.5, bitmap.height() as f64 - (y as f64 + 0.5)) + offset;
 
                 let min_dist = shape_distance_finder.distance(p);
 
@@ -213,7 +205,7 @@ impl Shape {
         }
     }
 
-    fn generate_sdf(self, config: GenerationConfig, bitmap: &mut BitmapData) {
+    fn generate_sdf(self, config: GenerationConfig, bitmap: &mut impl BitmapData) {
         if config.overlapping {
             self.generate_distance_field::<TrueDistanceSelector, OverlappingContourCombiner<_>>(
                 bitmap,
@@ -229,7 +221,7 @@ impl Shape {
         }
     }
 
-    fn generate_msdf(self, config: GenerationConfig, bitmap: &mut BitmapData) {
+    fn generate_msdf(self, config: GenerationConfig, bitmap: &mut impl BitmapData) {
         if config.overlapping {
             self.generate_distance_field::<MultiDistanceSelector, OverlappingContourCombiner<_>>(
                 bitmap,

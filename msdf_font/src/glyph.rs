@@ -1,6 +1,9 @@
-use crate::{BitmapData, FieldType, GenerationConfig, GlyphBounds, GlyphData, shape::Shape};
+use crate::{
+    BitmapData, BitmapImageType, BuildConfig, FieldType, GenerationConfig, GlyphBitmapData,
+    GlyphBounds, GlyphData, shape::Shape,
+};
 use glam::DVec2;
-use ttf_parser::{Face, GlyphId};
+use ttf_parser::Face;
 
 #[derive(Debug)]
 pub struct GlyphBuilder<'a> {
@@ -63,77 +66,36 @@ impl<'a> GlyphBuilder<'a> {
         self
     }
 
-    #[must_use]
-    pub fn build(self, c: char) -> Option<Glyph> {
+    pub(crate) fn prepare_for_build(&self, shape: &mut Shape, c: char) -> Option<BuildConfig> {
         let px_range = f64::from(self.px_range);
         let glyph_id = self.face.glyph_index(c)?;
 
-        Some(Glyph::new(
-            self.face,
-            glyph_id,
-            self.scale,
-            px_range,
-            self.field_type,
-            self.overlapping,
-            self.fix_geometry,
-        ))
-    }
-}
+        self.face.outline_glyph(glyph_id, shape);
 
-pub struct Glyph {
-    pub bitmap_data: BitmapData,
-    pub glyph_data: GlyphData,
-}
-impl Glyph {
-    pub(crate) fn new(
-        face: &Face,
-        glyph_id: GlyphId,
-        scale: f64,
-        px_range: f64,
-        field_type: FieldType,
-        overlapping: bool,
-        fix_geometry: bool,
-    ) -> Self {
-        let mut shape = Shape::new(scale);
-        face.outline_glyph(glyph_id, &mut shape);
-
-        // Glyph Bounds in bitmap scale.
         let mut bitmap_bounds = shape.bounds();
 
         // Glyph Bounds in em scale, (same as in the font file).
         let mut bounds_em = bitmap_bounds;
-        bounds_em.min /= scale;
-        bounds_em.max /= scale;
+        bounds_em.min /= self.scale;
+        bounds_em.max /= self.scale;
 
         // Padding for px_range.
         bitmap_bounds.min -= DVec2::splat(px_range);
         bitmap_bounds.max += DVec2::splat(px_range);
+        let bitmap_size = bitmap_bounds.size();
 
         // Glyph Bounds in em scale, (same as in the font file), with the padding.
         // We need this for rendering.
         let mut plane_bounds = bitmap_bounds;
-        plane_bounds.min /= scale;
-        plane_bounds.max /= scale;
+        plane_bounds.min /= self.scale;
+        plane_bounds.max /= self.scale;
 
-        let bitmap_size = bitmap_bounds.size();
-        let bitmap_width = bitmap_size.x.ceil() as usize;
-        let bitmap_height = bitmap_size.y.ceil() as usize;
-
-        let config = GenerationConfig {
-            px_range,
-            offset: bitmap_bounds.min,
-            bitmap_size: (bitmap_width, bitmap_height),
-            field_type,
-            overlapping,
-            fix_geometry,
-        };
-
-        let hor_advance = face.glyph_hor_advance(glyph_id).unwrap_or(0) as i32;
-        let ver_advance = face.glyph_ver_advance(glyph_id).unwrap_or(0) as i32;
+        let hor_advance = self.face.glyph_hor_advance(glyph_id).unwrap_or(0) as i32;
+        let ver_advance = self.face.glyph_ver_advance(glyph_id).unwrap_or(0) as i32;
 
         let advance = (hor_advance, ver_advance);
 
-        let hor_bearing = face.glyph_hor_side_bearing(glyph_id).unwrap_or(0) as i32;
+        let hor_bearing = self.face.glyph_hor_side_bearing(glyph_id).unwrap_or(0) as i32;
         let ver_bearing = bounds_em.max.y as i32;
 
         let bearing = (hor_bearing, ver_bearing);
@@ -150,8 +112,7 @@ impl Glyph {
         let plane_bounds_min = (plane_bounds.min.x as f32, plane_bounds.min.y as f32);
         let plane_bounds_max = (plane_bounds.max.x as f32, plane_bounds.max.y as f32);
 
-        Glyph {
-            bitmap_data: shape.generate_bitmap(config),
+        Some(BuildConfig {
             glyph_data: GlyphData {
                 plane_bounds: GlyphBounds {
                     min: plane_bounds_min,
@@ -164,8 +125,46 @@ impl Glyph {
                 advance,
                 bearing,
             },
-        }
+            generation_config: GenerationConfig {
+                px_range,
+                offset: bitmap_bounds.min,
+                field_type: self.field_type,
+                overlapping: self.overlapping,
+                fix_geometry: self.fix_geometry,
+            },
+            bitmap_size: (bitmap_size.x as usize, bitmap_size.y as usize),
+        })
     }
+
+    #[must_use]
+    pub fn build(self, c: char) -> Option<Glyph<GlyphBitmapData>> {
+        let mut shape = Shape::new(self.scale);
+
+        let image_type = match &self.field_type {
+            FieldType::Msdf(_) => BitmapImageType::Rgb8,
+            FieldType::Sdf => BitmapImageType::L8,
+        };
+
+        let build_config = self.prepare_for_build(&mut shape, c)?;
+
+        let mut bitmap_data = GlyphBitmapData::new(
+            build_config.bitmap_size.0,
+            build_config.bitmap_size.1,
+            image_type,
+        );
+
+        shape.generate_bitmap(build_config.generation_config, &mut bitmap_data);
+
+        Some(Glyph {
+            bitmap_data,
+            glyph_data: build_config.glyph_data,
+        })
+    }
+}
+
+pub struct Glyph<T: BitmapData> {
+    pub bitmap_data: T,
+    pub glyph_data: GlyphData,
 }
 
 #[inline]

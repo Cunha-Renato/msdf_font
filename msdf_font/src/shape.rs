@@ -109,7 +109,7 @@ impl Shape {
                     let m = contour.edges.len();
                     for i in 0..m {
                         contour.edges[(corner + i) % m].color =
-                            colors[symmetrical_trichotomy(i, m)];
+                            colors[(1 + symmetrical_trichotomy(i, m)) as usize];
                     }
                 } else if !contour.edges.is_empty() {
                     let first_thirds = contour.edges[0].split_in_thirds();

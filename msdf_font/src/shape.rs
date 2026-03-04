@@ -18,8 +18,6 @@ use i_overlay::{
     core::{fill_rule::FillRule, overlay::ContourDirection},
     float::{overlay::OverlayOptions, simplify::SimplifyShape},
 };
-#[cfg(feature = "rayon")]
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use ttf_parser::OutlineBuilder;
 
 #[derive(Debug)]
@@ -253,9 +251,6 @@ impl Shape {
                     return None;
                 }
 
-                #[cfg(feature = "rayon")]
-                let pts: Vec<[f64; 2]> = contour.edges.par_iter().flat_map(flatten_edge).collect();
-                #[cfg(not(feature = "rayon"))]
                 let pts: Vec<[f64; 2]> = contour.edges.iter().flat_map(flatten_edge).collect();
 
                 if pts.len() < 3 {

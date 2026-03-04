@@ -5,8 +5,6 @@ use crate::{
     BitmapImageType, BuildConfig, FieldType, GlyphBitmapData, GlyphBounds, GlyphBuilder, GlyphData,
     atlas::atlas_bitmap_data::BitmapDataRegion, shape::Shape,
 };
-#[cfg(feature = "rayon")]
-use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use std::collections::HashMap;
 
 #[derive(Debug)]

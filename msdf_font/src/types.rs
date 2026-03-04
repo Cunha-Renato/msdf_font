@@ -67,18 +67,6 @@ impl BitmapData for GlyphBitmapData {
             }
         }
     }
-
-    // fn get_px(&self, mut x: usize, mut y: usize, f: impl FnOnce(&[u8])) {
-    //     match self.image_type {
-    //         BitmapImageType::L8 => f(&[self.bytes[y * self.width + x]]),
-    //         BitmapImageType::Rgb8 => {
-    //             x *= 3;
-    //             y *= self.width * 3;
-
-    //             f(&self.bytes[(y + x)..=(y + x + 2)]);
-    //         }
-    //     }
-    // }
 }
 
 #[derive(Debug, Clone, Copy)]

@@ -21,7 +21,7 @@ impl Packer {
             let size_a = size_fn(a);
             let size_b = size_fn(b);
 
-            (size_b.0 * size_b.1).cmp(&(size_a.0 * size_a.1))
+            size_b.1.cmp(&size_a.1)
         });
 
         // Indexing the rects.
@@ -29,7 +29,7 @@ impl Packer {
             .iter()
             .map(|data| {
                 let size = size_fn(data);
-                total_area += size.0 * size.1;
+                total_area += (size.0 + Self::PADDING) * (size.1 + Self::PADDING);
 
                 (size.0, size.1)
             })

@@ -53,7 +53,7 @@ impl<'a> AtlasBuilder for GlyphBuilder<'a> {
 
         let glyph_table = shape_configs
             .into_iter()
-            .zip(packer.rects.into_iter())
+            .zip(packer.rects)
             .map(|(sc, packer)| {
                 let shape = sc.shape;
                 let config = sc.config;

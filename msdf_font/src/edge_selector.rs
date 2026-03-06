@@ -1,20 +1,19 @@
 use crate::{
     MultiDistance, SignedDistance, Vec2Ext,
     edge::{Edge, EdgeColor},
-    median,
 };
 use core::f64;
 use glam::DVec2;
 
 pub(crate) trait EdgeSelectorDistance {
-    fn resolve(&self) -> f64;
+    // fn resolve(&self) -> f64;
     fn to_bytes<F: FnOnce(&[u8])>(self, px_range: f64, f: F);
 }
 impl EdgeSelectorDistance for f64 {
-    #[inline]
-    fn resolve(&self) -> f64 {
-        *self
-    }
+    // #[inline]
+    // fn resolve(&self) -> f64 {
+    //     *self
+    // }
 
     #[inline]
     fn to_bytes<F: FnOnce(&[u8])>(self, px_range: f64, f: F) {
@@ -24,10 +23,10 @@ impl EdgeSelectorDistance for f64 {
     }
 }
 impl EdgeSelectorDistance for MultiDistance {
-    #[inline]
-    fn resolve(&self) -> f64 {
-        median(self.r, self.g, self.b)
-    }
+    // #[inline]
+    // fn resolve(&self) -> f64 {
+    //     median(self.r, self.g, self.b)
+    // }
 
     fn to_bytes<F: FnOnce(&[u8])>(self, px_range: f64, f: F) {
         let mut bytes = [0u8; 3];
@@ -43,8 +42,6 @@ pub(crate) trait EdgeSelector: Default + Clone + Send + Sync {
     type Distance: EdgeSelectorDistance;
 
     fn reset(&mut self, p: DVec2);
-
-    fn merge(&mut self, other: &Self);
 
     fn add_edge(&mut self, prev: &Edge, curr: &Edge, next: &Edge);
 
@@ -62,13 +59,6 @@ impl EdgeSelector for TrueDistanceSelector {
     fn reset(&mut self, p: DVec2) {
         self.min_distance = SignedDistance::default();
         self.p = p;
-    }
-
-    #[inline]
-    fn merge(&mut self, other: &Self) {
-        if other.min_distance < self.min_distance {
-            self.min_distance = other.min_distance;
-        }
     }
 
     fn add_edge(&mut self, _: &Edge, edge: &Edge, _: &Edge) {
@@ -100,21 +90,6 @@ impl PerpendicularDistanceSelectorBase {
         self.min_positive_perpendicular_distance = f64::INFINITY;
         self.near_edge = None;
         self.near_edge_param = 0.0;
-    }
-
-    fn merge(&mut self, other: &Self) {
-        if other.min_true_distance < self.min_true_distance {
-            self.min_true_distance = other.min_true_distance;
-            self.near_edge = other.near_edge;
-            self.near_edge_param = other.near_edge_param;
-        }
-
-        if other.min_negative_perpendicular_distance > self.min_negative_perpendicular_distance {
-            self.min_negative_perpendicular_distance = other.min_negative_perpendicular_distance;
-        }
-        if other.min_positive_perpendicular_distance < self.min_positive_perpendicular_distance {
-            self.min_positive_perpendicular_distance = other.min_positive_perpendicular_distance;
-        }
     }
 
     fn add_true_edge_distance(&mut self, edge: Edge, distance: SignedDistance, param: f64) {
@@ -223,12 +198,6 @@ impl EdgeSelector for MultiDistanceSelector {
         self.g.reset();
         self.b.reset();
         self.p = p;
-    }
-
-    fn merge(&mut self, other: &Self) {
-        self.r.merge(&other.r);
-        self.g.merge(&other.g);
-        self.b.merge(&other.b);
     }
 
     fn add_edge(&mut self, prev: &Edge, edge: &Edge, next: &Edge) {

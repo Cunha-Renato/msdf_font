@@ -12,7 +12,6 @@ pub struct GlyphBuilder<'a> {
     pub(crate) px_range: u32,
     pub(crate) max_angle: f64,
     pub(crate) field_type: FieldType,
-    pub(crate) overlapping: bool,
     pub(crate) fix_geometry: bool,
 }
 impl<'a> GlyphBuilder<'a> {
@@ -25,7 +24,6 @@ impl<'a> GlyphBuilder<'a> {
             px_range: 2,
             max_angle: 3.0,
             field_type: FieldType::default(),
-            overlapping: false,
             fix_geometry: false,
         }
     }
@@ -51,12 +49,6 @@ impl<'a> GlyphBuilder<'a> {
     #[inline]
     pub const fn field_type(mut self, field_type: FieldType) -> Self {
         self.field_type = field_type;
-        self
-    }
-
-    #[inline]
-    pub const fn overlapping(mut self, overlapping: bool) -> Self {
-        self.overlapping = overlapping;
         self
     }
 
@@ -129,7 +121,6 @@ impl<'a> GlyphBuilder<'a> {
                 px_range,
                 offset: bitmap_bounds.min,
                 field_type: self.field_type,
-                overlapping: self.overlapping,
                 fix_geometry: self.fix_geometry,
             },
             bitmap_size: (bitmap_size.x as usize, bitmap_size.y as usize),

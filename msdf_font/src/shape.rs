@@ -1,7 +1,7 @@
 use crate::{
     BitmapData, Bounds, FieldType, GenerationConfig,
     contour::Contour,
-    contour_combiner::{ContourCombiner, OverlappingContourCombiner, SimpleContourCombiner},
+    contour_combiner::{ContourCombiner, SimpleContourCombiner},
     edge::{Edge, EdgeColor},
     edge_coloring::{
         init_color, is_corner, switch_color, switch_color_banned, symmetrical_trichotomy,
@@ -204,35 +204,19 @@ impl Shape {
     }
 
     fn generate_sdf(self, config: GenerationConfig, bitmap: &mut impl BitmapData) {
-        if config.overlapping {
-            self.generate_distance_field::<TrueDistanceSelector, OverlappingContourCombiner<_>>(
-                bitmap,
-                config.px_range,
-                config.offset,
-            )
-        } else {
-            self.generate_distance_field::<TrueDistanceSelector, SimpleContourCombiner<_>>(
-                bitmap,
-                config.px_range,
-                config.offset,
-            )
-        }
+        self.generate_distance_field::<TrueDistanceSelector, SimpleContourCombiner<_>>(
+            bitmap,
+            config.px_range,
+            config.offset,
+        )
     }
 
     fn generate_msdf(self, config: GenerationConfig, bitmap: &mut impl BitmapData) {
-        if config.overlapping {
-            self.generate_distance_field::<MultiDistanceSelector, OverlappingContourCombiner<_>>(
-                bitmap,
-                config.px_range,
-                config.offset,
-            )
-        } else {
-            self.generate_distance_field::<MultiDistanceSelector, SimpleContourCombiner<_>>(
-                bitmap,
-                config.px_range,
-                config.offset,
-            )
-        }
+        self.generate_distance_field::<MultiDistanceSelector, SimpleContourCombiner<_>>(
+            bitmap,
+            config.px_range,
+            config.offset,
+        )
     }
 
     fn resolve_shape_geometry(&mut self) {

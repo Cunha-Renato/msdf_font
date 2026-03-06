@@ -19,4 +19,4 @@ mod atlas;
 #[cfg(feature = "atlas")]
 pub use atlas::*;
 
-pub(crate) use utils::{Vec2Ext, bound_point, median};
+pub(crate) use utils::{Vec2Ext, bound_point};

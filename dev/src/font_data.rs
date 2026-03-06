@@ -22,13 +22,10 @@ impl FontData {
         let face = ttf_parser::Face::parse(&buf, 0).ok()?;
 
         let px_range = 2;
-        let chars = (0..=0x0ff)
-            .filter_map(char::from_u32)
-            .collect::<Vec<_>>();
+        let chars = (0..=0x0ff).filter_map(char::from_u32).collect::<Vec<_>>();
         let atlas = GlyphBuilder::new(&face)
             .field_type(FieldType::Msdf(3.0))
             // .field_type(FieldType::Sdf)
-            .overlapping(false)
             .fix_geometry(false)
             .px_range(px_range)
             .px_size(40)

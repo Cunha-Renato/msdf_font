@@ -42,11 +42,6 @@ pub(crate) const fn bound_point(p: DVec2, bounds: &mut Bounds) {
     bounds.max.y = bounds.max.y.max(p.y);
 }
 
-#[inline]
-pub(crate) const fn median(a: f64, b: f64, c: f64) -> f64 {
-    a.min(b).max(a.max(b).min(c))
-}
-
 pub(crate) fn flatten_edge(edge: &Edge) -> Vec<[f64; 2]> {
     match edge.etype {
         EdgeType::Line { p0, .. } => vec![[p0.x, p0.y]],

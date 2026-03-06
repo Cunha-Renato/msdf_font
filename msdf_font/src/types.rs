@@ -2,13 +2,16 @@ use core::f64;
 use glam::DVec2;
 use std::cmp::Ordering;
 
+/// Represents the type of the distance field.
 #[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd)]
 pub enum FieldType {
+    /// Maximum angle.
     Msdf(f32),
     #[default]
     Sdf,
 }
 
+/// Represents the channes of the bitmap.
 #[derive(Debug, Clone, Copy)]
 pub enum BitmapImageType {
     L8,
@@ -16,15 +19,21 @@ pub enum BitmapImageType {
 }
 
 pub trait BitmapData {
+    /// Returns the width in pixels.
     fn width(&self) -> usize;
+    /// Returns the height in pixels.
     fn height(&self) -> usize;
+    /// Sets the pixel with the [px] value.
     fn set_px(&mut self, px: &[u8], x: usize, y: usize);
 }
 
+/// Struct representing the bitmap data.
 #[derive(Debug)]
 pub struct GlyphBitmapData {
     pub bytes: Vec<u8>,
+    /// Width in pixels.
     pub width: usize,
+    /// Height in pixels.
     pub height: usize,
     pub image_type: BitmapImageType,
 }
@@ -71,7 +80,9 @@ impl BitmapData for GlyphBitmapData {
 
 #[derive(Debug, Clone, Copy)]
 pub struct GlyphBounds<T: Copy> {
+    /// (Left, Top).
     pub min: (T, T),
+    /// (Right, Bottom).
     pub max: (T, T),
 }
 impl<T: Copy + std::ops::Sub<Output = T>> GlyphBounds<T> {
@@ -81,6 +92,7 @@ impl<T: Copy + std::ops::Sub<Output = T>> GlyphBounds<T> {
     }
 }
 
+/// Data representing the Glyph.
 #[derive(Debug, Clone, Copy)]
 pub struct GlyphData {
     pub plane_bounds: GlyphBounds<f32>,
@@ -94,7 +106,6 @@ pub(crate) struct GenerationConfig {
     pub(crate) px_range: f64,
     pub(crate) offset: DVec2,
     pub(crate) field_type: FieldType,
-    pub(crate) overlapping: bool,
     pub(crate) fix_geometry: bool,
 }
 

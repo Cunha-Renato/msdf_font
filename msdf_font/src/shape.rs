@@ -4,7 +4,8 @@ use crate::{
     contour_combiner::{ContourCombiner, SimpleContourCombiner},
     edge::{Edge, EdgeColor},
     edge_coloring::{
-        init_color, is_corner, switch_color, switch_color_banned, symmetrical_trichotomy,
+        estimate_edge_len, init_color, is_corner, switch_color, switch_color_banned,
+        symmetrical_trichotomy,
     },
     edge_selector::{
         EdgeSelector, EdgeSelectorDistance, MultiDistanceSelector, TrueDistanceSelector,
@@ -56,38 +57,50 @@ impl Shape {
 
         match config.field_type {
             FieldType::Msdf { max_angle } => {
-                self.simple_coloring(f64::from(max_angle), 0);
+                self.ink_trap_coloring(f64::from(max_angle), 0);
                 self.generate_msdf(config, bitmap);
             }
             FieldType::Sdf => self.generate_sdf(config, bitmap),
         }
     }
 
-    fn simple_coloring(&mut self, angle_treshold: f64, mut seed: usize) {
+    fn ink_trap_coloring(&mut self, angle_treshold: f64, mut seed: usize) {
+        #[derive(Default)]
+        struct InkTrapCorner {
+            index: usize,
+            prev_edge_len_estimate: f64,
+            minor: bool,
+            color: EdgeColor,
+        }
+
         let cross_treshold = angle_treshold.sin();
         let mut color = init_color(&mut seed);
-        let mut corners = vec![];
+
+        let mut corners = Vec::new();
 
         for contour in &mut self.contours {
             if contour.edges.is_empty() {
                 continue;
             }
 
+            let mut spline_len = 0.0;
             corners.clear();
-            if let Some(last) = contour.edges.last() {
-                let mut prev_dir = last.dir(1.0);
 
-                for (i, edge) in contour.edges.iter().enumerate() {
-                    if is_corner(
-                        prev_dir.normalize(),
-                        edge.dir(0.0).normalize(),
-                        cross_treshold,
-                    ) {
-                        corners.push(i);
-                    }
+            let mut prev_dir = contour.edges.last().unwrap().dir(1.0);
+            for (index, edge) in contour.edges.iter_mut().enumerate() {
+                if is_corner(prev_dir.normalize(), edge.dir(0.0), cross_treshold) {
+                    let corner = InkTrapCorner {
+                        index,
+                        prev_edge_len_estimate: spline_len,
+                        ..Default::default()
+                    };
 
-                    prev_dir = edge.dir(1.0);
+                    corners.push(corner);
+                    spline_len = 0.0;
                 }
+
+                spline_len += estimate_edge_len(edge);
+                prev_dir = edge.dir(1.0);
             }
 
             if corners.is_empty() {
@@ -101,80 +114,117 @@ impl Shape {
                 let colors = [color, EdgeColor::White, switch_color(color, &mut seed)];
                 color = colors[2];
 
-                let corner = corners[0];
-
+                let corner = corners[0].index;
                 if contour.edges.len() >= 3 {
                     let m = contour.edges.len();
+
                     for i in 0..m {
                         contour.edges[(corner + i) % m].color =
                             colors[(1 + symmetrical_trichotomy(i, m)) as usize];
                     }
-                } else if !contour.edges.is_empty() {
-                    let first_thirds = contour.edges[0].split_in_thirds();
-                    let mut parts: [Edge; 6];
+                } else if contour.edges.len() >= 1 {
+                    let mut parts = [None; 7];
+
+                    let segments = contour.edges[0].split_in_thirds();
+
+                    parts[3 * corner] = Some(segments[0]);
+                    parts[1 + 3 * corner] = Some(segments[1]);
+                    parts[2 + 3 * corner] = Some(segments[2]);
 
                     if contour.edges.len() >= 2 {
-                        let second_thirds = contour.edges[1].split_in_thirds();
+                        let segments = contour.edges[1].split_in_thirds();
 
-                        parts = if corner == 0 {
-                            [
-                                first_thirds[0],  // color[0]
-                                first_thirds[1],  // color[0]
-                                first_thirds[2],  // color[1]
-                                second_thirds[0], // color[1]
-                                second_thirds[1], // color[2]
-                                second_thirds[2], // color[2]
-                            ]
-                        } else {
-                            [
-                                second_thirds[0], // color[0]
-                                second_thirds[1], // color[0]
-                                second_thirds[2], // color[1]
-                                first_thirds[0],  // color[1]
-                                first_thirds[1],  // color[2]
-                                first_thirds[2],  // color[2]
-                            ]
-                        };
+                        parts[3 - 3 * corner] = Some(segments[0]);
+                        parts[4 - 3 * corner] = Some(segments[1]);
+                        parts[5 - 3 * corner] = Some(segments[2]);
 
-                        parts[0].color = colors[0];
-                        parts[1].color = colors[0];
-                        parts[2].color = colors[1];
-                        parts[3].color = colors[1];
-                        parts[4].color = colors[2];
-                        parts[5].color = colors[2];
-
-                        contour.edges = parts.into();
+                        for p in &mut parts[0..2] {
+                            if let Some(p) = p {
+                                p.color = colors[0];
+                            }
+                        }
+                        for p in &mut parts[2..4] {
+                            if let Some(p) = p {
+                                p.color = colors[1];
+                            }
+                        }
+                        for p in &mut parts[4..6] {
+                            if let Some(p) = p {
+                                p.color = colors[2];
+                            }
+                        }
                     } else {
-                        let [mut a, mut b, mut c] = first_thirds;
-                        a.color = colors[0];
-                        b.color = colors[1];
-                        c.color = colors[2];
-
-                        contour.edges = vec![a, b, c];
+                        for i in 0..3 {
+                            if let Some(p) = &mut parts[i] {
+                                p.color = colors[i];
+                            }
+                        }
                     }
+
+                    contour.edges = parts.into_iter().filter_map(|p| p).collect();
                 }
             } else {
                 let corner_count = corners.len();
-                let mut spline = 0;
-                let start = corners[0];
-                let m = contour.edges.len();
-                color = switch_color(color, &mut seed);
-                let initial_color = color;
+                let mut major_corner_count = corner_count;
 
-                for i in 0..m {
-                    let index = (start + i) % m;
-                    if spline + 1 < corner_count && corners[spline + 1] == index {
-                        spline += 1;
+                if corner_count > 3 {
+                    corners[0].prev_edge_len_estimate += spline_len;
+                    for i in 0..corner_count {
+                        if corners[i].prev_edge_len_estimate
+                            > corners[(i + 1) % corner_count].prev_edge_len_estimate
+                            && corners[(i + 1) % corner_count].prev_edge_len_estimate
+                                < corners[(i + 2) % corner_count].prev_edge_len_estimate
+                        {
+                            corners[i].minor = true;
+                            major_corner_count -= 1;
+                        }
+                    }
+                }
+
+                let mut initial_color = EdgeColor::Black;
+                for i in 0..corner_count {
+                    if !corners[i].minor {
+                        major_corner_count -= 1;
                         color = switch_color_banned(
                             color,
                             &mut seed,
-                            EdgeColor::from_u8(if spline == corner_count - 1 {
-                                initial_color as u8
+                            if major_corner_count == 0 {
+                                initial_color
                             } else {
-                                0
-                            }),
+                                EdgeColor::Black
+                            },
                         );
+                        corners[i].color = color;
+
+                        if initial_color == EdgeColor::Black {
+                            initial_color = color;
+                        }
                     }
+                }
+
+                for i in 0..corner_count {
+                    if corners[i].minor {
+                        let next_color = corners[(i + 1) % corner_count].color;
+                        corners[i].color = EdgeColor::from_u8(
+                            (color as u8 & next_color as u8) ^ EdgeColor::White as u8,
+                        )
+                    } else {
+                        color = corners[i].color;
+                    }
+                }
+
+                let mut spline = 0;
+                let start = corners[0].index;
+                let m = contour.edges.len();
+                color = corners[0].color;
+
+                for i in 0..m {
+                    let index = (start + i) % m;
+                    if spline + 1 < corner_count && corners[spline + 1].index == index {
+                        spline += 1;
+                        color = corners[spline].color;
+                    }
+
                     contour.edges[index].color = color;
                 }
             }

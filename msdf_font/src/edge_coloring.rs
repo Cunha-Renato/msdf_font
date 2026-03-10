@@ -1,4 +1,7 @@
-use crate::{Vec2Ext, edge::EdgeColor};
+use crate::{
+    Vec2Ext,
+    edge::{Edge, EdgeColor},
+};
 use glam::DVec2;
 
 #[inline]
@@ -51,4 +54,19 @@ pub(crate) const fn switch_color_banned(
         }
         _ => switch_color(color, seed),
     }
+}
+
+pub(crate) fn estimate_edge_len(edge: &Edge) -> f64 {
+    const EDGE_LEN_PRECISION: usize = 4;
+
+    let mut len = 0.0;
+    let mut prev = edge.point(0.0);
+
+    for i in 1..=EDGE_LEN_PRECISION {
+        let cur = edge.point(1.0 / (EDGE_LEN_PRECISION * i) as f64);
+        len += (cur - prev).length();
+        prev = cur;
+    }
+
+    len
 }

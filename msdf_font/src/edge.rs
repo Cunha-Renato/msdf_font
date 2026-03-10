@@ -2,7 +2,7 @@ use crate::{Bounds, SignedDistance, Vec2Ext, bound_point, solvers::solve_cubic};
 use glam::DVec2;
 
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum EdgeColor {
     Black = 0,
     Red = 1,
@@ -11,6 +11,7 @@ pub(crate) enum EdgeColor {
     Blue = 4,
     Magenta = 5,
     Cyan = 6,
+    #[default]
     White = 7,
 }
 impl EdgeColor {

@@ -1,7 +1,4 @@
-use crate::{
-    MultiDistance, SignedDistance, Vec2Ext,
-    edge::{Edge, EdgeColor},
-};
+use crate::{MultiDistance, SignedDistance, Vec2Ext, edge::Edge, edge_color::EdgeColor};
 use core::f64;
 use glam::DVec2;
 
@@ -17,9 +14,9 @@ impl EdgeSelectorDistance for f64 {
 
     #[inline]
     fn to_bytes<F: FnOnce(&[u8])>(self, px_range: f64, f: F) {
-        let normalized = (self / px_range).clamp(-1.0, 1.0);
+        let normalized = (self / px_range + 0.5).clamp(0.0, 1.0);
 
-        f(&[((normalized * 0.5 + 0.5) * 255.0).round() as u8]);
+        f(&[(normalized * 255.0).round() as u8]);
     }
 }
 impl EdgeSelectorDistance for MultiDistance {
@@ -204,15 +201,15 @@ impl EdgeSelector for MultiDistanceSelector {
         let mut param = 0.0;
         let distance = edge.sd(self.p, &mut param);
 
-        if edge.color as u8 & EdgeColor::Red as u8 != 0 {
+        if edge.color & EdgeColor::RED != EdgeColor::BLACK {
             self.r.add_true_edge_distance(*edge, distance, param);
         }
 
-        if edge.color as u8 & EdgeColor::Green as u8 != 0 {
+        if edge.color & EdgeColor::GREEN != EdgeColor::BLACK {
             self.g.add_true_edge_distance(*edge, distance, param);
         }
 
-        if edge.color as u8 & EdgeColor::Blue as u8 != 0 {
+        if edge.color & EdgeColor::BLUE != EdgeColor::BLACK {
             self.b.add_true_edge_distance(*edge, distance, param);
         }
 
@@ -231,15 +228,15 @@ impl EdgeSelector for MultiDistanceSelector {
             if PerpendicularDistanceSelectorBase::perpendicular_distance(&mut pd, ap, -a_dir) {
                 pd = -pd;
 
-                if edge.color as u8 & EdgeColor::Red as u8 != 0 {
+                if edge.color & EdgeColor::RED != EdgeColor::BLACK {
                     self.r.add_perpendicular_distance(pd);
                 }
 
-                if edge.color as u8 & EdgeColor::Green as u8 != 0 {
+                if edge.color & EdgeColor::GREEN != EdgeColor::BLACK {
                     self.g.add_perpendicular_distance(pd);
                 }
 
-                if edge.color as u8 & EdgeColor::Blue as u8 != 0 {
+                if edge.color & EdgeColor::BLUE != EdgeColor::BLACK {
                     self.b.add_perpendicular_distance(pd);
                 }
             }
@@ -248,15 +245,15 @@ impl EdgeSelector for MultiDistanceSelector {
         if bdd > 0.0 {
             let mut pd = distance.distance;
             if PerpendicularDistanceSelectorBase::perpendicular_distance(&mut pd, bp, b_dir) {
-                if edge.color as u8 & EdgeColor::Red as u8 != 0 {
+                if edge.color & EdgeColor::RED != EdgeColor::BLACK {
                     self.r.add_perpendicular_distance(pd);
                 }
 
-                if edge.color as u8 & EdgeColor::Green as u8 != 0 {
+                if edge.color & EdgeColor::GREEN != EdgeColor::BLACK {
                     self.g.add_perpendicular_distance(pd);
                 }
 
-                if edge.color as u8 & EdgeColor::Blue as u8 != 0 {
+                if edge.color & EdgeColor::BLUE != EdgeColor::BLACK {
                     self.b.add_perpendicular_distance(pd);
                 }
             }

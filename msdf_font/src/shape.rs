@@ -2,10 +2,8 @@ use crate::{
     BitmapData, Bounds, FieldType, GenerationConfig,
     contour::Contour,
     contour_combiner::{ContourCombiner, SimpleContourCombiner},
-    edge::{Edge, EdgeColor},
-    edge_coloring::{
-        init_color, is_corner, switch_color, switch_color_banned, symmetrical_trichotomy,
-    },
+    edge::Edge,
+    edge_color::EdgeColor,
     edge_selector::{
         EdgeSelector, EdgeSelectorDistance, MultiDistanceSelector, TrueDistanceSelector,
     },
@@ -56,126 +54,99 @@ impl Shape {
 
         match config.field_type {
             FieldType::Msdf { max_angle } => {
-                self.simple_coloring(f64::from(max_angle), 0);
+                self.coloring_simple(max_angle, 0);
                 self.generate_msdf(config, bitmap);
             }
             FieldType::Sdf => self.generate_sdf(config, bitmap),
         }
     }
 
-    fn simple_coloring(&mut self, angle_treshold: f64, mut seed: usize) {
-        let cross_treshold = angle_treshold.sin();
-        let mut color = init_color(&mut seed);
-        let mut corners = vec![];
+    fn coloring_simple(&mut self, alpha: f64, mut seed: usize) {
+        let sin_alpha = alpha.sin();
 
         for contour in &mut self.contours {
-            if contour.edges.is_empty() {
-                continue;
-            }
+            let mut corners = Vec::new();
 
-            corners.clear();
-            if let Some(last) = contour.edges.last() {
-                let mut prev_dir = last.dir(1.0);
+            if let Some(last_edge) = contour.edges.last() {
+                if last_edge.is_corner(&contour.edges[0], sin_alpha) {
+                    corners.push(0);
+                }
 
-                for (i, edge) in contour.edges.iter().enumerate() {
-                    if is_corner(
-                        prev_dir.normalize(),
-                        edge.dir(0.0).normalize(),
-                        cross_treshold,
-                    ) {
-                        corners.push(i);
+                for i in 0..(contour.edges.len() - 1) {
+                    if contour.edges[i].is_corner(&contour.edges[i + 1], sin_alpha) {
+                        corners.push(i + 1);
                     }
-
-                    prev_dir = edge.dir(1.0);
                 }
             }
 
-            if corners.is_empty() {
-                color = switch_color(color, &mut seed);
-
-                for edge in &mut contour.edges {
-                    edge.color = color;
+            let s = corners.first().copied().unwrap_or(0);
+            if s != 0 {
+                contour.edges.rotate_left(s);
+                for c in &mut corners {
+                    *c -= s;
                 }
-            } else if corners.len() == 1 {
-                color = switch_color(color, &mut seed);
-                let colors = [color, EdgeColor::White, switch_color(color, &mut seed)];
-                color = colors[2];
+            }
 
-                let corner = corners[0];
+            if corners.len() == 1 {
+                let color = EdgeColor::WHITE.switch(&mut seed, EdgeColor::BLACK);
+                let color2 = color.switch(&mut seed, EdgeColor::BLACK);
 
-                if contour.edges.len() >= 3 {
-                    let m = contour.edges.len();
-                    for i in 0..m {
-                        contour.edges[(corner + i) % m].color =
-                            colors[(1 + symmetrical_trichotomy(i, m)) as usize];
+                let colors = [color, EdgeColor::WHITE, color2];
+
+                match contour.edges.len() {
+                    0 => (),
+                    1 => {
+                        let split = contour.edges[0].split_in_thirds();
+                        contour.edges = split
+                            .into_iter()
+                            .zip(colors)
+                            .map(|(mut edge, color)| {
+                                edge.color = color;
+                                edge
+                            })
+                            .collect();
                     }
-                } else if !contour.edges.is_empty() {
-                    let first_thirds = contour.edges[0].split_in_thirds();
-                    let mut parts: [Edge; 6];
+                    2 => {
+                        let split_0 = contour.edges[0].split_in_thirds();
+                        let split_1 = contour.edges[1].split_in_thirds();
+                        contour.edges = split_0
+                            .into_iter()
+                            .chain(split_1)
+                            .enumerate()
+                            .map(|(i, mut edge)| {
+                                edge.color = colors[i / 2];
+                                edge
+                            })
+                            .collect();
+                    }
+                    _ => {
+                        let num_edge = contour.edges.len();
 
-                    if contour.edges.len() >= 2 {
-                        let second_thirds = contour.edges[1].split_in_thirds();
-
-                        parts = if corner == 0 {
-                            [
-                                first_thirds[0],  // color[0]
-                                first_thirds[1],  // color[0]
-                                first_thirds[2],  // color[1]
-                                second_thirds[0], // color[1]
-                                second_thirds[1], // color[2]
-                                second_thirds[2], // color[2]
-                            ]
-                        } else {
-                            [
-                                second_thirds[0], // color[0]
-                                second_thirds[1], // color[0]
-                                second_thirds[2], // color[1]
-                                first_thirds[0],  // color[1]
-                                first_thirds[1],  // color[2]
-                                first_thirds[2],  // color[2]
-                            ]
-                        };
-
-                        parts[0].color = colors[0];
-                        parts[1].color = colors[0];
-                        parts[2].color = colors[1];
-                        parts[3].color = colors[1];
-                        parts[4].color = colors[2];
-                        parts[5].color = colors[2];
-
-                        contour.edges = parts.into();
-                    } else {
-                        let [mut a, mut b, mut c] = first_thirds;
-                        a.color = colors[0];
-                        b.color = colors[1];
-                        c.color = colors[2];
-
-                        contour.edges = vec![a, b, c];
+                        for (i, edge) in contour.edges.iter_mut().enumerate() {
+                            // WTF is this?
+                            let index = (num_edge - 1 + 46 * i) / (16 * (num_edge - 1));
+                            edge.color = colors[index];
+                        }
                     }
                 }
-            } else {
-                let corner_count = corners.len();
+            } else if !contour.edges.is_empty() {
                 let mut spline = 0;
-                let start = corners[0];
-                let m = contour.edges.len();
-                color = switch_color(color, &mut seed);
+                let mut color = EdgeColor::WHITE.switch(&mut seed, EdgeColor::BLACK);
                 let initial_color = color;
 
-                for i in 0..m {
-                    let index = (start + i) % m;
-                    if spline + 1 < corner_count && corners[spline + 1] == index {
+                for (i, edge) in contour.edges.iter_mut().enumerate() {
+                    if corners.get(spline + 1) == Some(&i) {
                         spline += 1;
-                        color = switch_color_banned(
-                            color,
+                        color = color.switch(
                             &mut seed,
-                            EdgeColor::from_u8(if spline == corner_count - 1 {
-                                initial_color as u8
+                            if spline == corners.len() - 1 {
+                                initial_color
                             } else {
-                                0
-                            }),
-                        );
+                                EdgeColor::BLACK
+                            },
+                        )
                     }
-                    contour.edges[index].color = color;
+                    edge.color = color;
                 }
             }
         }
@@ -187,8 +158,8 @@ impl Shape {
         px_range: f64,
         offset: DVec2,
     ) {
-        let contour_combiner = C::new(&self);
-        let mut shape_distance_finder = ShapeDistanceFinder::new(&self, contour_combiner);
+        let contour_combiner = C::new(self);
+        let mut shape_distance_finder = ShapeDistanceFinder::new(self, contour_combiner);
         for y in 0..bitmap.height() {
             for x in 0..bitmap.width() {
                 let p =

@@ -22,13 +22,14 @@ impl FontData {
         let face = ttf_parser::Face::parse(&buf, 0).ok()?;
 
         let px_range = 2;
-        let chars = (0..=0x0ff).filter_map(char::from_u32).collect::<Vec<_>>();
+        // let chars = (0..=0x0ff).filter_map(char::from_u32).collect::<Vec<_>>();
+        let chars = ['$'];
         let atlas = GlyphBuilder::new(&face)
             .field_type(FieldType::Msdf { max_angle: 3.0 })
             // .field_type(FieldType::Sdf)
             .fix_geometry(false)
             .px_range(px_range)
-            .px_size(40)
+            .px_size(50)
             .build_atlas(&chars)?;
 
         let ascender = f64::from(face.ascender());

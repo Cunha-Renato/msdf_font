@@ -1,33 +1,7 @@
-use crate::{Bounds, SignedDistance, Vec2Ext, bound_point, solvers::solve_cubic};
+use crate::{
+    Bounds, SignedDistance, Vec2Ext, bound_point, edge_color::EdgeColor, solvers::solve_cubic,
+};
 use glam::DVec2;
-
-#[repr(u8)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum EdgeColor {
-    Black = 0,
-    Red = 1,
-    Green = 2,
-    Yellow = 3,
-    Blue = 4,
-    Magenta = 5,
-    Cyan = 6,
-    White = 7,
-}
-impl EdgeColor {
-    #[inline]
-    pub(crate) const fn from_u8(value: u8) -> Self {
-        match value & 0b111 {
-            0 => Self::Black,
-            1 => Self::Red,
-            2 => Self::Green,
-            3 => Self::Yellow,
-            4 => Self::Blue,
-            5 => Self::Magenta,
-            6 => Self::Cyan,
-            _ => Self::White,
-        }
-    }
-}
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum EdgeType {
@@ -43,7 +17,7 @@ pub(crate) struct Edge {
 impl Edge {
     #[inline]
     pub(crate) const fn new_line(p0: DVec2, p1: DVec2) -> Self {
-        Self::new_line_color(p0, p1, EdgeColor::White)
+        Self::new_line_color(p0, p1, EdgeColor::WHITE)
     }
 
     #[inline]
@@ -56,7 +30,7 @@ impl Edge {
 
     #[inline]
     pub(crate) const fn new_quad(p0: DVec2, p1: DVec2, p2: DVec2) -> Self {
-        Self::new_quad_color(p0, p1, p2, EdgeColor::White)
+        Self::new_quad_color(p0, p1, p2, EdgeColor::WHITE)
     }
 
     #[inline]
@@ -211,4 +185,14 @@ impl Edge {
             ],
         }
     }
+
+    #[inline]
+    pub(crate) fn is_corner(&self, other: &Self, alpha: f64) -> bool {
+        is_corner(self.dir(1.0), other.dir(0.0), alpha)
+    }
+}
+
+#[inline]
+fn is_corner(a: DVec2, b: DVec2, alpha: f64) -> bool {
+    a.dot(b) <= 0.0 || a.cross(b).abs() > alpha
 }

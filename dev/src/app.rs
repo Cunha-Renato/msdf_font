@@ -236,9 +236,11 @@ impl AppCore {
         let dpi = self.window.scale_factor();
         let text_size = 200.0;
         let scale = (text_size * dpi as f32) / self.font_data.units_per_em as f32;
-        let text = "AabBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVxXyYzZ.";
+        let text = (0x0..0x0ff)
+            .filter_map(|c| char::from_u32(c))
+            .collect::<String>();
 
-        let mut pos = [0.0, 300.0];
+        let mut pos = [0.0, 200.0];
         let instances = text
             .chars()
             .filter_map(|c| {

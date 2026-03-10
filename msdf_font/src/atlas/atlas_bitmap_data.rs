@@ -23,8 +23,8 @@ impl BitmapData for BitmapDataRegion<'_> {
         self.data.set_px(px, self.x + x, self.y + y);
     }
 
-    // #[inline]
-    // fn get_px(&self, x: usize, y: usize, f: impl FnOnce(&[u8])) {
-    //     self.data.get_px(self.x + x, self.y + y, f);
-    // }
+    #[inline]
+    fn get_px(&self, x: usize, y: usize, f: impl FnOnce(&[u8])) {
+        self.data.get_px(self.x + x, self.y + y, f);
+    }
 }

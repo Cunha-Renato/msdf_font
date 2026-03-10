@@ -5,8 +5,10 @@ use std::cmp::Ordering;
 /// Represents the type of the distance field.
 #[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd)]
 pub enum FieldType {
-    /// Maximum angle.
-    Msdf(f32),
+    Msdf {
+        max_angle: f64,
+        // error_correction: bool,
+    },
     #[default]
     Sdf,
 }
@@ -23,8 +25,10 @@ pub trait BitmapData {
     fn width(&self) -> usize;
     /// Returns the height in pixels.
     fn height(&self) -> usize;
-    /// Sets the pixel with the [px] value.
+    /// Sets the pixel at (x, y) with the [px] value.
     fn set_px(&mut self, px: &[u8], x: usize, y: usize);
+    /// Gets the pixel at (x, y).
+    fn get_px(&self, x: usize, y: usize, f: impl FnOnce(&[u8]));
 }
 
 /// Struct representing the bitmap data.
@@ -73,6 +77,18 @@ impl BitmapData for GlyphBitmapData {
                 self.bytes[y + x] = px[0];
                 self.bytes[y + x + 1] = px[1];
                 self.bytes[y + x + 2] = px[2];
+            }
+        }
+    }
+
+    fn get_px(&self, mut x: usize, mut y: usize, f: impl FnOnce(&[u8])) {
+        match self.image_type {
+            BitmapImageType::L8 => f(&[self.bytes[y * self.width + x]]),
+            BitmapImageType::Rgb8 => {
+                x *= 3;
+                y *= self.width * 3;
+
+                f(&self.bytes[(y + x)..(y + x + 3)]);
             }
         }
     }

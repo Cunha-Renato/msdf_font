@@ -19,7 +19,7 @@ pub trait AtlasBuilder {
 impl<'a> AtlasBuilder for GlyphBuilder<'a> {
     fn build_atlas(self, c: &[char]) -> Option<Atlas> {
         let image_type = match &self.field_type {
-            FieldType::Msdf(_) => BitmapImageType::Rgb8,
+            FieldType::Msdf { .. } => BitmapImageType::Rgb8,
             FieldType::Sdf => BitmapImageType::L8,
         };
 

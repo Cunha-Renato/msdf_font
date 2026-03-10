@@ -24,7 +24,7 @@ impl FontData {
         let px_range = 2;
         let chars = (0..=0x0ff).filter_map(char::from_u32).collect::<Vec<_>>();
         let atlas = GlyphBuilder::new(&face)
-            .field_type(FieldType::Msdf(3.0))
+            .field_type(FieldType::Msdf { max_angle: 3.0 })
             // .field_type(FieldType::Sdf)
             .fix_geometry(false)
             .px_range(px_range)

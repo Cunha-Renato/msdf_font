@@ -54,15 +54,13 @@ impl Shape {
             self.resolve_shape_geometry();
         }
 
-        let func = match config.field_type {
-            FieldType::Msdf(max_angle) => {
+        match config.field_type {
+            FieldType::Msdf { max_angle } => {
                 self.simple_coloring(f64::from(max_angle), 0);
-                Self::generate_msdf
+                self.generate_msdf(config, bitmap);
             }
-            FieldType::Sdf => Self::generate_sdf,
-        };
-
-        func(self, config, bitmap);
+            FieldType::Sdf => self.generate_sdf(config, bitmap),
+        }
     }
 
     fn simple_coloring(&mut self, angle_treshold: f64, mut seed: usize) {
@@ -184,7 +182,7 @@ impl Shape {
     }
 
     fn generate_distance_field<E: EdgeSelector, C: ContourCombiner<E>>(
-        self,
+        &self,
         bitmap: &mut impl BitmapData,
         px_range: f64,
         offset: DVec2,
@@ -203,7 +201,7 @@ impl Shape {
         }
     }
 
-    fn generate_sdf(self, config: GenerationConfig, bitmap: &mut impl BitmapData) {
+    fn generate_sdf(&self, config: GenerationConfig, bitmap: &mut impl BitmapData) {
         self.generate_distance_field::<TrueDistanceSelector, SimpleContourCombiner<_>>(
             bitmap,
             config.px_range,
@@ -211,7 +209,7 @@ impl Shape {
         )
     }
 
-    fn generate_msdf(self, config: GenerationConfig, bitmap: &mut impl BitmapData) {
+    fn generate_msdf(&self, config: GenerationConfig, bitmap: &mut impl BitmapData) {
         self.generate_distance_field::<MultiDistanceSelector, SimpleContourCombiner<_>>(
             bitmap,
             config.px_range,

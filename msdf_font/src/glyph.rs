@@ -76,6 +76,10 @@ impl<'a> GlyphBuilder<'a> {
         bitmap_bounds.max += DVec2::splat(px_range);
         let bitmap_size = bitmap_bounds.size();
 
+        if bitmap_size.x.ceil() as usize == 0 || bitmap_size.y.ceil() as usize == 0 {
+            return None;
+        }
+
         // Glyph Bounds in em scale, (same as in the font file), with the padding.
         // We need this for rendering.
         let mut plane_bounds = bitmap_bounds;
@@ -123,7 +127,7 @@ impl<'a> GlyphBuilder<'a> {
                 field_type: self.field_type,
                 fix_geometry: self.fix_geometry,
             },
-            bitmap_size: (bitmap_size.x as usize, bitmap_size.y as usize),
+            bitmap_size: (bitmap_size.x.ceil() as usize, bitmap_size.y.ceil() as usize),
         })
     }
 
@@ -132,7 +136,7 @@ impl<'a> GlyphBuilder<'a> {
         let mut shape = Shape::new(self.scale);
 
         let image_type = match &self.field_type {
-            FieldType::Msdf(_) => BitmapImageType::Rgb8,
+            FieldType::Msdf { .. } => BitmapImageType::Rgb8,
             FieldType::Sdf => BitmapImageType::L8,
         };
 

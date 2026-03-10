@@ -1,7 +1,7 @@
 mod contour;
 mod contour_combiner;
 mod edge;
-mod edge_coloring;
+mod edge_color;
 mod edge_selector;
 mod glyph;
 mod shape;

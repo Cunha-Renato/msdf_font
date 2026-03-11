@@ -7,8 +7,10 @@ use crate::{
 };
 use std::collections::HashMap;
 
+/// Similar to [`crate::GlyphData`] but for the atlas mode.
 #[derive(Debug)]
 pub struct AtlasGlyphData {
+    /// Location and size of the glyph (in px) inside the atlas.
     pub atlas_bounds: GlyphBounds<f32>,
     pub data: GlyphData,
 }
@@ -17,6 +19,11 @@ pub trait AtlasBuilder {
     fn build_atlas(self, c: &[char]) -> Option<Atlas>;
 }
 impl<'a> AtlasBuilder for GlyphBuilder<'a> {
+    /// Returns [`None`] if no glyph could be build.
+    /// 
+    /// See [`crate::GlyphBuilder::build`].
+    ///
+    /// For the packing it uses a simple height based packer.
     fn build_atlas(self, c: &[char]) -> Option<Atlas> {
         struct ShapeConfig {
             config: BuildConfig,
@@ -92,7 +99,10 @@ impl<'a> AtlasBuilder for GlyphBuilder<'a> {
     }
 }
 
+/// Represents the glyph atlas.
 pub struct Atlas {
+    /// Bitmap of the entire atlas.
     pub bitmap_data: GlyphBitmapData,
+    /// Table of data for glyphs.
     pub glyph_table: HashMap<char, AtlasGlyphData>,
 }

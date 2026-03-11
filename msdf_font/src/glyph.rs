@@ -7,9 +7,13 @@ use ttf_parser::Face;
 /// Data representing the Glyph.
 #[derive(Debug, Clone, Copy)]
 pub struct GlyphData {
+    /// Bounds for constructing the rendering quad.
     pub plane_bounds: GlyphBounds<f32>,
+    /// Bounds of the original glyph.
     pub em_bounds: GlyphBounds<i32>,
+    /// Glyph advance (in em).
     pub advance: [i32; 2],
+    /// Glyph bearing (in em).
     pub bearing: [i32; 2],
 }
 
@@ -32,7 +36,6 @@ pub struct GlyphBuilder<'a> {
     pub(crate) face: &'a Face<'a>,
     pub(crate) scale: f64,
     pub(crate) px_range: u32,
-    pub(crate) max_angle: f64,
     pub(crate) field_type: FieldType,
     pub(crate) fix_geometry: bool,
 }
@@ -44,40 +47,64 @@ impl<'a> GlyphBuilder<'a> {
             face,
             scale,
             px_range: 2,
-            max_angle: 3.0,
             field_type: FieldType::default(),
             fix_geometry: false,
         }
     }
 
+    /// Default is 16.
     #[inline]
     pub fn px_size(mut self, px_size: u32) -> Self {
         self.scale = scale_value(f64::from(px_size), self.face);
         self
     }
 
+    /// Default is 2.
     #[inline]
     pub const fn px_range(mut self, px_range: u32) -> Self {
         self.px_range = px_range;
         self
     }
 
-    #[inline]
-    pub const fn max_angle(mut self, max_angle: f64) -> Self {
-        self.max_angle = max_angle;
-        self
-    }
-
+    /// Default is [`crate::FieldType::Sdf`].
     #[inline]
     pub const fn field_type(mut self, field_type: FieldType) -> Self {
         self.field_type = field_type;
         self
     }
 
+    /// Default is [`false`].
     #[inline]
     pub const fn fix_geometry(mut self, fix_geometry: bool) -> Self {
         self.fix_geometry = fix_geometry;
         self
+    }
+
+    /// Returns [`None`] if glyph is not present in the font, or glyph
+    /// has width or height == 0 (Space for example).
+    #[must_use]
+    pub fn build(self, c: char) -> Option<Glyph<GlyphBitmapData>> {
+        let mut shape = Shape::new(self.scale);
+
+        let image_type = match &self.field_type {
+            FieldType::Msdf { .. } => BitmapImageType::Rgb8,
+            FieldType::Sdf => BitmapImageType::L8,
+        };
+
+        let build_config = self.prepare_for_build(&mut shape, c)?;
+
+        let mut bitmap_data = GlyphBitmapData::new(
+            build_config.bitmap_size.0,
+            build_config.bitmap_size.1,
+            image_type,
+        );
+
+        shape.generate_bitmap(build_config.generation_config, &mut bitmap_data);
+
+        Some(Glyph {
+            bitmap_data,
+            glyph_data: build_config.glyph_data,
+        })
     }
 
     pub(crate) fn prepare_for_build(&self, shape: &mut Shape, c: char) -> Option<BuildConfig> {
@@ -150,31 +177,6 @@ impl<'a> GlyphBuilder<'a> {
                 fix_geometry: self.fix_geometry,
             },
             bitmap_size: (bitmap_size.x.ceil() as usize, bitmap_size.y.ceil() as usize),
-        })
-    }
-
-    #[must_use]
-    pub fn build(self, c: char) -> Option<Glyph<GlyphBitmapData>> {
-        let mut shape = Shape::new(self.scale);
-
-        let image_type = match &self.field_type {
-            FieldType::Msdf { .. } => BitmapImageType::Rgb8,
-            FieldType::Sdf => BitmapImageType::L8,
-        };
-
-        let build_config = self.prepare_for_build(&mut shape, c)?;
-
-        let mut bitmap_data = GlyphBitmapData::new(
-            build_config.bitmap_size.0,
-            build_config.bitmap_size.1,
-            image_type,
-        );
-
-        shape.generate_bitmap(build_config.generation_config, &mut bitmap_data);
-
-        Some(Glyph {
-            bitmap_data,
-            glyph_data: build_config.glyph_data,
         })
     }
 }

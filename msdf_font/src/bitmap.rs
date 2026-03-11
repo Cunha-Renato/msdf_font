@@ -1,4 +1,4 @@
-/// Represents the channes of the bitmap.
+/// Represents the channels of the bitmap.
 #[derive(Debug, Clone, Copy)]
 pub enum BitmapImageType {
     L8,

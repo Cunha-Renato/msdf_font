@@ -191,7 +191,7 @@ impl Edge {
         is_corner(self.dir(1.0), other.dir(0.0), alpha)
     }
 
-    pub(crate) fn to_lines(self) -> Vec<DVec2> {
+    pub(crate) fn as_lines(&self) -> Vec<DVec2> {
         match self.etype {
             EdgeType::Line { p0, .. } => vec![p0],
             EdgeType::Quad { p0, p1, p2 } => {

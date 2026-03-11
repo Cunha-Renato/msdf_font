@@ -27,7 +27,7 @@ impl FontData {
         let atlas = GlyphBuilder::new(&face)
             .field_type(FieldType::Msdf { max_angle: 3.0 })
             // .field_type(FieldType::Sdf)
-            .fix_geometry(false)
+            .fix_geometry(true)
             .px_range(px_range)
             .px_size(40)
             .build_atlas(&chars)?;

@@ -60,6 +60,119 @@ impl Shape {
         }
     }
 
+    fn generate_distance_field<E: EdgeSelector, C: ContourCombiner<E>>(
+        &self,
+        bitmap: &mut impl BitmapData,
+        px_range: f64,
+        offset: DVec2,
+    ) {
+        let contour_combiner = C::new(self);
+        let mut shape_distance_finder = ShapeDistanceFinder::new(self, contour_combiner);
+        for y in 0..bitmap.height() {
+            for x in 0..bitmap.width() {
+                let p =
+                    DVec2::new(x as f64 + 0.5, bitmap.height() as f64 - (y as f64 + 0.5)) + offset;
+
+                let min_dist = shape_distance_finder.distance(p);
+
+                min_dist.to_bytes(px_range, |b| bitmap.set_px(b, x, y));
+            }
+        }
+    }
+
+    fn generate_sdf(&self, config: GenerationConfig, bitmap: &mut impl BitmapData) {
+        self.generate_distance_field::<TrueDistanceSelector, SimpleContourCombiner<_>>(
+            bitmap,
+            config.px_range,
+            config.offset,
+        )
+    }
+
+    fn generate_msdf(&self, config: GenerationConfig, bitmap: &mut impl BitmapData) {
+        self.generate_distance_field::<MultiDistanceSelector, SimpleContourCombiner<_>>(
+            bitmap,
+            config.px_range,
+            config.offset,
+        )
+    }
+
+    fn resolve_shape_geometry(&mut self) {
+        if self.contours.is_empty() {
+            return;
+        }
+
+        // Convert contours to i_overlay's shape format:
+        // Vec<Vec<Vec<[f64; 2]>>> = Vec<Shape> where Shape = Vec<Contour>
+        // Each contour is a flat list of edge start points (auto-closed)
+        let shape: Vec<Vec<[f64; 2]>> = self
+            .contours
+            .iter()
+            .filter_map(|contour| {
+                if contour.edges.is_empty() {
+                    return None;
+                }
+
+                let pts: Vec<[f64; 2]> = contour
+                    .edges
+                    .iter()
+                    .flat_map(Edge::as_lines)
+                    .map(|p| [p.x, p.y])
+                    .collect();
+
+                if pts.len() < 3 {
+                    return None;
+                }
+
+                Some(pts)
+            })
+            .collect();
+
+        if shape.is_empty() {
+            return;
+        }
+
+        // simplify() resolves self-intersections under the NonZero fill rule
+        // and returns clean non-overlapping contours
+        let result: Vec<Vec<Vec<[f64; 2]>>> = shape.simplify_shape_custom(
+            FillRule::NonZero,
+            OverlayOptions {
+                output_direction: ContourDirection::Clockwise,
+                ..Default::default()
+            },
+            Default::default(),
+        );
+
+        if result.is_empty() {
+            return;
+        }
+
+        self.contours.clear();
+
+        for shape in result {
+            for poly in shape {
+                if poly.len() < 2 {
+                    continue;
+                }
+
+                let mut contour = Contour::default();
+                let n = poly.len();
+                
+                for i in 0..n {
+                    let p0 = DVec2::new(poly[i][0], poly[i][1]);
+                    let p1 = DVec2::new(poly[(i + 1) % n][0], poly[(i + 1) % n][1]);
+
+                    if p0 != p1 {
+                        contour.edges.push(Edge::new_line(p0, p1));
+                    }
+                }
+
+                if !contour.edges.is_empty() {
+                    self.contours.push(contour);
+                }
+            }
+        }
+    }
+
     fn coloring_simple(&mut self, alpha: f64, mut seed: usize) {
         let sin_alpha = alpha.sin();
 
@@ -146,116 +259,6 @@ impl Shape {
                         )
                     }
                     edge.color = color;
-                }
-            }
-        }
-    }
-
-    fn generate_distance_field<E: EdgeSelector, C: ContourCombiner<E>>(
-        &self,
-        bitmap: &mut impl BitmapData,
-        px_range: f64,
-        offset: DVec2,
-    ) {
-        let contour_combiner = C::new(self);
-        let mut shape_distance_finder = ShapeDistanceFinder::new(self, contour_combiner);
-        for y in 0..bitmap.height() {
-            for x in 0..bitmap.width() {
-                let p =
-                    DVec2::new(x as f64 + 0.5, bitmap.height() as f64 - (y as f64 + 0.5)) + offset;
-
-                let min_dist = shape_distance_finder.distance(p);
-
-                min_dist.to_bytes(px_range, |b| bitmap.set_px(b, x, y));
-            }
-        }
-    }
-
-    fn generate_sdf(&self, config: GenerationConfig, bitmap: &mut impl BitmapData) {
-        self.generate_distance_field::<TrueDistanceSelector, SimpleContourCombiner<_>>(
-            bitmap,
-            config.px_range,
-            config.offset,
-        )
-    }
-
-    fn generate_msdf(&self, config: GenerationConfig, bitmap: &mut impl BitmapData) {
-        self.generate_distance_field::<MultiDistanceSelector, SimpleContourCombiner<_>>(
-            bitmap,
-            config.px_range,
-            config.offset,
-        )
-    }
-
-    fn resolve_shape_geometry(&mut self) {
-        if self.contours.is_empty() {
-            return;
-        }
-
-        // Convert contours to i_overlay's shape format:
-        // Vec<Vec<Vec<[f64; 2]>>> = Vec<Shape> where Shape = Vec<Contour>
-        // Each contour is a flat list of edge start points (auto-closed)
-        let shape: Vec<Vec<[f64; 2]>> = std::mem::take(&mut self.contours)
-            .into_iter()
-            .filter_map(|contour| {
-                if contour.edges.is_empty() {
-                    return None;
-                }
-
-                let pts: Vec<[f64; 2]> = contour
-                    .edges
-                    .into_iter()
-                    .flat_map(Edge::to_lines)
-                    .map(|p| [p.x, p.y])
-                    .collect();
-
-                if pts.len() < 3 {
-                    return None;
-                }
-
-                Some(pts)
-            })
-            .collect();
-
-        if shape.is_empty() {
-            return;
-        }
-
-        // simplify() resolves self-intersections under the NonZero fill rule
-        // and returns clean non-overlapping contours
-        let result: Vec<Vec<Vec<[f64; 2]>>> = shape.simplify_shape_custom(
-            FillRule::NonZero,
-            OverlayOptions {
-                output_direction: ContourDirection::Clockwise,
-                ..Default::default()
-            },
-            Default::default(),
-        );
-
-        if result.is_empty() {
-            return;
-        }
-
-        for shape in result {
-            for poly in shape {
-                if poly.len() < 2 {
-                    continue;
-                }
-
-                let mut contour = crate::contour::Contour::default();
-                let n = poly.len();
-
-                for i in 0..n {
-                    let p0 = DVec2::new(poly[i][0], poly[i][1]);
-                    let p1 = DVec2::new(poly[(i + 1) % n][0], poly[(i + 1) % n][1]);
-
-                    if p0 != p1 {
-                        contour.edges.push(crate::edge::Edge::new_line(p0, p1));
-                    }
-                }
-
-                if !contour.edges.is_empty() {
-                    self.contours.push(contour);
                 }
             }
         }

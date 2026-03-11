@@ -1,5 +1,7 @@
+mod bitmap;
 mod contour;
 mod contour_combiner;
+mod distance;
 mod edge;
 mod edge_color;
 mod edge_selector;
@@ -8,8 +10,9 @@ mod shape;
 mod shape_distance_finder;
 mod solvers;
 mod types;
-mod utils;
+mod vec2;
 
+pub use bitmap::*;
 pub use glyph::*;
 pub use ttf_parser;
 pub use types::*;
@@ -18,5 +21,3 @@ pub use types::*;
 mod atlas;
 #[cfg(feature = "atlas")]
 pub use atlas::*;
-
-pub(crate) use utils::{Vec2Ext, bound_point};

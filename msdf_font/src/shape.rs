@@ -8,7 +8,6 @@ use crate::{
         EdgeSelector, EdgeSelectorDistance, MultiDistanceSelector, TrueDistanceSelector,
     },
     shape_distance_finder::ShapeDistanceFinder,
-    utils::flatten_edge,
 };
 use core::f64;
 use glam::DVec2;
@@ -196,15 +195,19 @@ impl Shape {
         // Convert contours to i_overlay's shape format:
         // Vec<Vec<Vec<[f64; 2]>>> = Vec<Shape> where Shape = Vec<Contour>
         // Each contour is a flat list of edge start points (auto-closed)
-        let shape: Vec<Vec<[f64; 2]>> = self
-            .contours
-            .iter()
+        let shape: Vec<Vec<[f64; 2]>> = std::mem::take(&mut self.contours)
+            .into_iter()
             .filter_map(|contour| {
                 if contour.edges.is_empty() {
                     return None;
                 }
 
-                let pts: Vec<[f64; 2]> = contour.edges.iter().flat_map(flatten_edge).collect();
+                let pts: Vec<[f64; 2]> = contour
+                    .edges
+                    .into_iter()
+                    .flat_map(Edge::to_lines)
+                    .map(|p| [p.x, p.y])
+                    .collect();
 
                 if pts.len() < 3 {
                     return None;
@@ -232,8 +235,6 @@ impl Shape {
         if result.is_empty() {
             return;
         }
-
-        self.contours.clear();
 
         for shape in result {
             for poly in shape {

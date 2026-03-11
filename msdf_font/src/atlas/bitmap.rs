@@ -1,4 +1,4 @@
-use crate::{BitmapData, GlyphBitmapData};
+use crate::bitmap::{BitmapData, GlyphBitmapData};
 
 pub(super) struct BitmapDataRegion<'a> {
     pub(super) data: &'a mut GlyphBitmapData,

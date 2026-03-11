@@ -1,4 +1,9 @@
-use crate::{MultiDistance, SignedDistance, Vec2Ext, edge::Edge, edge_color::EdgeColor};
+use crate::{
+    distance::{MultiDistance, SignedDistance},
+    edge::Edge,
+    edge_color::EdgeColor,
+    vec2::Vec2Ext,
+};
 use core::f64;
 use glam::DVec2;
 
@@ -7,11 +12,6 @@ pub(crate) trait EdgeSelectorDistance {
     fn to_bytes<F: FnOnce(&[u8])>(self, px_range: f64, f: F);
 }
 impl EdgeSelectorDistance for f64 {
-    // #[inline]
-    // fn resolve(&self) -> f64 {
-    //     *self
-    // }
-
     #[inline]
     fn to_bytes<F: FnOnce(&[u8])>(self, px_range: f64, f: F) {
         let normalized = (self / px_range + 0.5).clamp(0.0, 1.0);
@@ -20,11 +20,6 @@ impl EdgeSelectorDistance for f64 {
     }
 }
 impl EdgeSelectorDistance for MultiDistance {
-    // #[inline]
-    // fn resolve(&self) -> f64 {
-    //     median(self.r, self.g, self.b)
-    // }
-
     fn to_bytes<F: FnOnce(&[u8])>(self, px_range: f64, f: F) {
         let mut bytes = [0u8; 3];
         self.r.to_bytes(px_range, |b| bytes[0] = b[0]);

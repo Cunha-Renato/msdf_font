@@ -1,9 +1,31 @@
 use crate::{
-    BitmapData, BitmapImageType, BuildConfig, FieldType, GenerationConfig, GlyphBitmapData,
-    GlyphBounds, GlyphData, shape::Shape,
+    BitmapData, BitmapImageType, FieldType, GenerationConfig, GlyphBitmapData, shape::Shape,
 };
 use glam::DVec2;
 use ttf_parser::Face;
+
+/// Data representing the Glyph.
+#[derive(Debug, Clone, Copy)]
+pub struct GlyphData {
+    pub plane_bounds: GlyphBounds<f32>,
+    pub em_bounds: GlyphBounds<i32>,
+    pub advance: (i32, i32),
+    pub bearing: (i32, i32),
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct GlyphBounds<T: Copy> {
+    /// (Left, Top).
+    pub min: (T, T),
+    /// (Right, Bottom).
+    pub max: (T, T),
+}
+impl<T: Copy + std::ops::Sub<Output = T>> GlyphBounds<T> {
+    #[inline]
+    pub fn size(&self) -> (T, T) {
+        (self.max.0 - self.min.0, self.max.1 - self.min.1)
+    }
+}
 
 #[derive(Debug)]
 pub struct GlyphBuilder<'a> {
@@ -16,7 +38,7 @@ pub struct GlyphBuilder<'a> {
 }
 impl<'a> GlyphBuilder<'a> {
     pub fn new(face: &'a Face) -> Self {
-        let scale = scale_value(f64::from(16), face);
+        let scale = scale_value(16.0, face);
 
         Self {
             face,
@@ -160,6 +182,13 @@ impl<'a> GlyphBuilder<'a> {
 pub struct Glyph<T: BitmapData> {
     pub bitmap_data: T,
     pub glyph_data: GlyphData,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct BuildConfig {
+    pub(crate) glyph_data: GlyphData,
+    pub(crate) generation_config: GenerationConfig,
+    pub(crate) bitmap_size: (usize, usize),
 }
 
 #[inline]

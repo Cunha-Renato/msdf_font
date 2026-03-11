@@ -1,6 +1,5 @@
 use core::f64;
 use glam::DVec2;
-use std::cmp::Ordering;
 
 /// Represents the type of the distance field.
 #[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd)]
@@ -13,160 +12,12 @@ pub enum FieldType {
     Sdf,
 }
 
-/// Represents the channes of the bitmap.
-#[derive(Debug, Clone, Copy)]
-pub enum BitmapImageType {
-    L8,
-    Rgb8,
-}
-
-pub trait BitmapData {
-    /// Returns the width in pixels.
-    fn width(&self) -> usize;
-    /// Returns the height in pixels.
-    fn height(&self) -> usize;
-    /// Sets the pixel at (x, y) with the [px] value.
-    fn set_px(&mut self, px: &[u8], x: usize, y: usize);
-    /// Gets the pixel at (x, y).
-    fn get_px(&self, x: usize, y: usize, f: impl FnOnce(&[u8]));
-}
-
-/// Struct representing the bitmap data.
-#[derive(Debug)]
-pub struct GlyphBitmapData {
-    pub bytes: Vec<u8>,
-    /// Width in pixels.
-    pub width: usize,
-    /// Height in pixels.
-    pub height: usize,
-    pub image_type: BitmapImageType,
-}
-impl GlyphBitmapData {
-    pub(crate) fn new(width: usize, height: usize, image_type: BitmapImageType) -> Self {
-        let channels = match image_type {
-            BitmapImageType::L8 => 1,
-            BitmapImageType::Rgb8 => 3,
-        };
-
-        Self {
-            bytes: vec![0u8; width * height * channels],
-            width,
-            height,
-            image_type,
-        }
-    }
-}
-impl BitmapData for GlyphBitmapData {
-    #[inline]
-    fn width(&self) -> usize {
-        self.width
-    }
-
-    #[inline]
-    fn height(&self) -> usize {
-        self.height
-    }
-
-    fn set_px(&mut self, px: &[u8], mut x: usize, mut y: usize) {
-        match self.image_type {
-            BitmapImageType::L8 => self.bytes[y * self.width + x] = px[0],
-            BitmapImageType::Rgb8 => {
-                x *= 3;
-                y *= self.width * 3;
-
-                self.bytes[y + x] = px[0];
-                self.bytes[y + x + 1] = px[1];
-                self.bytes[y + x + 2] = px[2];
-            }
-        }
-    }
-
-    fn get_px(&self, mut x: usize, mut y: usize, f: impl FnOnce(&[u8])) {
-        match self.image_type {
-            BitmapImageType::L8 => f(&[self.bytes[y * self.width + x]]),
-            BitmapImageType::Rgb8 => {
-                x *= 3;
-                y *= self.width * 3;
-
-                f(&self.bytes[(y + x)..(y + x + 3)]);
-            }
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct GlyphBounds<T: Copy> {
-    /// (Left, Top).
-    pub min: (T, T),
-    /// (Right, Bottom).
-    pub max: (T, T),
-}
-impl<T: Copy + std::ops::Sub<Output = T>> GlyphBounds<T> {
-    #[inline]
-    pub fn size(&self) -> (T, T) {
-        (self.max.0 - self.min.0, self.max.1 - self.min.1)
-    }
-}
-
-/// Data representing the Glyph.
-#[derive(Debug, Clone, Copy)]
-pub struct GlyphData {
-    pub plane_bounds: GlyphBounds<f32>,
-    pub em_bounds: GlyphBounds<i32>,
-    pub advance: (i32, i32),
-    pub bearing: (i32, i32),
-}
-
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct GenerationConfig {
     pub(crate) px_range: f64,
     pub(crate) offset: DVec2,
     pub(crate) field_type: FieldType,
     pub(crate) fix_geometry: bool,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub(crate) struct BuildConfig {
-    pub(crate) glyph_data: GlyphData,
-    pub(crate) generation_config: GenerationConfig,
-    pub(crate) bitmap_size: (usize, usize),
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub(crate) struct SignedDistance {
-    pub(crate) distance: f64,
-    pub(crate) dot: f64,
-}
-impl Default for SignedDistance {
-    fn default() -> Self {
-        Self {
-            distance: f64::INFINITY,
-            dot: f64::NEG_INFINITY,
-        }
-    }
-}
-impl SignedDistance {
-    #[inline]
-    pub(crate) const fn new(distance: f64, dot: f64) -> Self {
-        Self { distance, dot }
-    }
-}
-impl PartialOrd for SignedDistance {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        let a = self.distance.abs();
-        let b = other.distance.abs();
-
-        match a.partial_cmp(&b)? {
-            Ordering::Equal => self.dot.partial_cmp(&other.dot),
-            ord => Some(ord),
-        }
-    }
-}
-
-pub(crate) struct MultiDistance {
-    pub(crate) r: f64,
-    pub(crate) g: f64,
-    pub(crate) b: f64,
 }
 
 #[derive(Debug, Clone, Copy)]

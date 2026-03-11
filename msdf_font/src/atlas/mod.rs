@@ -1,9 +1,9 @@
-mod atlas_bitmap_data;
+mod bitmap;
 mod packer;
 
 use crate::{
     BitmapImageType, BuildConfig, FieldType, GlyphBitmapData, GlyphBounds, GlyphBuilder, GlyphData,
-    atlas::atlas_bitmap_data::BitmapDataRegion, shape::Shape,
+    atlas::bitmap::BitmapDataRegion, shape::Shape,
 };
 use std::collections::HashMap;
 
@@ -18,11 +18,6 @@ pub trait AtlasBuilder {
 }
 impl<'a> AtlasBuilder for GlyphBuilder<'a> {
     fn build_atlas(self, c: &[char]) -> Option<Atlas> {
-        let image_type = match &self.field_type {
-            FieldType::Msdf { .. } => BitmapImageType::Rgb8,
-            FieldType::Sdf => BitmapImageType::L8,
-        };
-
         struct ShapeConfig {
             config: BuildConfig,
             shape: Shape,
@@ -49,6 +44,10 @@ impl<'a> AtlasBuilder for GlyphBuilder<'a> {
 
         let packer = packer::Packer::pack(&mut shape_configs, |sc| sc.config.bitmap_size);
 
+        let image_type = match &self.field_type {
+            FieldType::Msdf { .. } => BitmapImageType::Rgb8,
+            FieldType::Sdf => BitmapImageType::L8,
+        };
         let mut bitmap_data = GlyphBitmapData::new(packer.width, packer.height, image_type);
 
         let glyph_table = shape_configs

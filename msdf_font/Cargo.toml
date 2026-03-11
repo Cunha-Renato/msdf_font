@@ -7,9 +7,10 @@ edition.workspace = true
 glam.workspace = true
 ttf-parser.workspace = true
 i_overlay.workspace = true
+rayon = { workspace = true, optional = true }
 
 [lints]
 workspace = true
 
 [features]
-atlas = []
+atlas = ["dep:rayon"]

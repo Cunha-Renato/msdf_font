@@ -5,6 +5,7 @@ use crate::{
     BitmapImageType, BuildConfig, FieldType, GlyphBitmapData, GlyphBounds, GlyphBuilder, GlyphData,
     atlas::bitmap::BitmapDataRegion, shape::Shape,
 };
+use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 use std::collections::HashMap;
 
 /// Similar to [`crate::GlyphData`] but for the atlas mode.
@@ -20,7 +21,7 @@ pub trait AtlasBuilder {
 }
 impl<'a> AtlasBuilder for GlyphBuilder<'a> {
     /// Returns [`None`] if no glyph could be build.
-    /// 
+    ///
     /// See [`crate::GlyphBuilder::build`].
     ///
     /// For the packing it uses a simple height based packer.
@@ -56,16 +57,19 @@ impl<'a> AtlasBuilder for GlyphBuilder<'a> {
             FieldType::Sdf => BitmapImageType::L8,
         };
         let mut bitmap_data = GlyphBitmapData::new(packer.width, packer.height, image_type);
+        let bitmap_ptr = &mut bitmap_data as *mut GlyphBitmapData as usize;
 
         let glyph_table = shape_configs
-            .into_iter()
+            .into_par_iter()
             .zip(packer.rects)
             .map(|(sc, packer)| {
+                // This is fine, we don't have overlapping pixels.
+                let bitmap_ref = unsafe { &mut *(bitmap_ptr as *mut GlyphBitmapData) };
                 let shape = sc.shape;
                 let config = sc.config;
 
                 let mut bitmap_region = BitmapDataRegion {
-                    data: &mut bitmap_data,
+                    data: bitmap_ref,
                     x: packer.x,
                     y: packer.y,
                     width: config.bitmap_size.0,

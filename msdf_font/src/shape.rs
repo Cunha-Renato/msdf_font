@@ -154,20 +154,21 @@ impl Shape {
                     continue;
                 }
 
-                let mut contour = Contour::default();
                 let n = poly.len();
-                
-                for i in 0..n {
-                    let p0 = DVec2::new(poly[i][0], poly[i][1]);
-                    let p1 = DVec2::new(poly[(i + 1) % n][0], poly[(i + 1) % n][1]);
 
-                    if p0 != p1 {
-                        contour.edges.push(Edge::new_line(p0, p1));
-                    }
-                }
+                let edges = (0..n)
+                    .map(|i| {
+                        (
+                            DVec2::new(poly[i][0], poly[i][1]),
+                            DVec2::new(poly[(i + 1) % n][0], poly[(i + 1) % n][1]),
+                        )
+                    })
+                    .filter(|(p0, p1)| p0 != p1)
+                    .map(|(p0, p1)| Edge::new_line(p0, p1))
+                    .collect::<Vec<_>>();
 
-                if !contour.edges.is_empty() {
-                    self.contours.push(contour);
+                if !edges.is_empty() {
+                    self.contours.push(Contour { edges });
                 }
             }
         }

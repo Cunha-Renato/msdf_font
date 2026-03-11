@@ -74,6 +74,8 @@ impl<'a> GlyphBuilder<'a> {
     }
 
     /// Default is [`false`].
+    ///
+    /// This is super expensive to compute.
     #[inline]
     pub const fn fix_geometry(mut self, fix_geometry: bool) -> Self {
         self.fix_geometry = fix_geometry;

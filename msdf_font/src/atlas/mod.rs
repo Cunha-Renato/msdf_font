@@ -67,11 +67,11 @@ impl<'a> AtlasBuilder for GlyphBuilder<'a> {
 
                 shape.generate_bitmap(config.generation_config, &mut bitmap_region);
 
-                let min = (packer.x as f32, packer.y as f32);
-                let max = (
-                    min.0 + bitmap_region.width as f32,
-                    min.1 + bitmap_region.height as f32,
-                );
+                let min = [packer.x as f32, packer.y as f32];
+                let max = [
+                    min[0] + bitmap_region.width as f32,
+                    min[1] + bitmap_region.height as f32,
+                ];
 
                 let atlas_bounds = GlyphBounds { min, max };
 

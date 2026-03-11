@@ -4,7 +4,6 @@ use crate::{
     edge_color::EdgeColor,
     vec2::Vec2Ext,
 };
-use core::f64;
 use glam::DVec2;
 
 pub(crate) trait EdgeSelectorDistance {

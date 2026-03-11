@@ -9,7 +9,12 @@ use l3gion::{
 };
 use msdf_font::BitmapImageType;
 use std::sync::Arc;
-use winit::{application::ApplicationHandler, event::WindowEvent, window::Window};
+use winit::{
+    application::ApplicationHandler,
+    event::WindowEvent,
+    keyboard::{KeyCode, PhysicalKey},
+    window::Window,
+};
 
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Zeroable, bytemuck::Pod)]
@@ -50,6 +55,7 @@ struct AppCore {
     renderer: LgRenderer,
     renderer_data: RendererData,
     font_data: FontData,
+    font_size: f32,
 }
 impl AppCore {
     fn new(window: Arc<Window>, renderer: LgRenderer) -> Self {
@@ -198,6 +204,7 @@ impl AppCore {
             renderer,
             renderer_data,
             font_data,
+            font_size: 100.0,
         }
     }
 
@@ -234,11 +241,11 @@ impl AppCore {
             })
             .build(&self.renderer);
         let dpi = self.window.scale_factor();
-        let text_size = 500.0;
-        let scale = (text_size * dpi as f32) / self.font_data.units_per_em as f32;
-        let text = (0x0..0x0ff).filter_map(char::from_u32).collect::<String>();
+        let scale = (self.font_size * dpi as f32) / self.font_data.units_per_em as f32;
+        // let text = (0x0..0x0ff).filter_map(char::from_u32).collect::<String>();
+        let text = "The quick brown fox jumped over the lazy dog.";
 
-        let mut pos = [0.0, 500.0];
+        let mut pos = [0.0, self.font_size];
         let instances = text
             .chars()
             .filter_map(|c| {
@@ -246,24 +253,29 @@ impl AppCore {
                     let size = g_data.data.plane_bounds.size();
                     let size = (size.0 * scale, size.1 * scale);
 
-                    let uv_offset = [
-                        g_data.atlas_bounds.min.0 as f32 / self.font_data.atlas_size.0,
-                        g_data.atlas_bounds.min.1 as f32 / self.font_data.atlas_size.1,
-                    ];
+                    if size.0 + pos[0] > self.window.inner_size().width as f32 {
+                        pos[0] = 0.0;
+                        pos[1] += self.font_data.line_height as f32 * scale;
+                    }
 
-                    let uv_size = [
-                        (g_data.atlas_bounds.max.0 as f32 / self.font_data.atlas_size.0)
-                            - uv_offset[0],
-                        (g_data.atlas_bounds.max.1 as f32 / self.font_data.atlas_size.1)
-                            - uv_offset[1],
-                    ];
+                    let mut uv_offset = [0.0; 2];
+                    let mut uv_size = [0.0; 2];
+
+                    for i in 0..2 {
+                        uv_offset[i] =
+                            g_data.atlas_bounds.min[i] as f32 / self.font_data.atlas_size[i];
+
+                        uv_size[i] = g_data.atlas_bounds.max[i] as f32
+                            / self.font_data.atlas_size[i]
+                            - uv_offset[i];
+                    }
 
                     let position = [
-                        pos[0] + g_data.data.bearing.0 as f32 * scale,
-                        pos[1] - g_data.data.bearing.1 as f32 * scale,
+                        pos[0] + g_data.data.bearing[0] as f32 * scale,
+                        pos[1] - g_data.data.bearing[1] as f32 * scale,
                     ];
 
-                    pos[0] += g_data.data.advance.0 as f32 * scale;
+                    pos[0] += g_data.data.advance[0] as f32 * scale;
                     Instance {
                         position,
                         size: [size.0, size.1],
@@ -295,6 +307,31 @@ impl AppCore {
             .end_and_submit(&self.renderer);
 
         surface_texture.present();
+    }
+
+    fn event(&mut self, event: WindowEvent) {
+        match event {
+            WindowEvent::Resized(size) => {
+                self.resize(size.width, size.height);
+            }
+            WindowEvent::RedrawRequested => {
+                self.render();
+            }
+            WindowEvent::KeyboardInput { event, .. } => {
+                if !event.state.is_pressed() {
+                    return;
+                }
+                println!("Font size: {}", self.font_size);
+                if let PhysicalKey::Code(code) = event.physical_key {
+                    match code {
+                        KeyCode::KeyW => self.font_size += 1.0,
+                        KeyCode::KeyS => self.font_size -= 1.0,
+                        _ => {}
+                    }
+                }
+            }
+            _ => {}
+        }
     }
 }
 
@@ -338,16 +375,10 @@ impl ApplicationHandler for App {
         };
 
         match event {
-            WindowEvent::Resized(size) => {
-                core.resize(size.width, size.height);
-            }
             WindowEvent::CloseRequested => {
                 event_loop.exit();
             }
-            WindowEvent::RedrawRequested => {
-                core.render();
-            }
-            _ => {}
+            _ => core.event(event),
         }
     }
 }

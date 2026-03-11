@@ -76,7 +76,7 @@ fn vs_main(
 @group(1) @binding(0) var u_tex_color: texture_2d<f32>;
 @group(1) @binding(1) var u_tex_sampler: sampler;
 
-const px_range = 2.0;
+const px_range = 4.0;
 
 fn sqr(x: vec2<f32>) -> vec2<f32> {
   return x * x;

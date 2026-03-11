@@ -1,3 +1,0 @@
-- Error correction (MSDF)
-- MTSDF (maybe)
-- Optimize BitmapData (for atlas).

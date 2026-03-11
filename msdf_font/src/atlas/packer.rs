@@ -16,7 +16,7 @@ impl Packer {
     pub(super) fn pack<T>(data: &mut [T], size_fn: impl Fn(&T) -> (usize, usize)) -> Self {
         let mut total_area = 0;
 
-        // Sort by area.
+        // Sort by height.
         data.sort_by(|a, b| {
             let size_a = size_fn(a);
             let size_b = size_fn(b);
@@ -35,7 +35,11 @@ impl Packer {
             })
             .collect::<Vec<_>>();
 
-        let width = (total_area as f64).sqrt().ceil() as usize;
+        let width = if data.len() > 1 {
+            (total_area as f64).sqrt().ceil() as usize
+        } else {
+            size_fn(&data[0]).0
+        };
 
         let mut x_cursor = 0;
         let mut y_cursor = 0;

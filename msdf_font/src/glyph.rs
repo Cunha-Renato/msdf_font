@@ -9,21 +9,21 @@ use ttf_parser::Face;
 pub struct GlyphData {
     pub plane_bounds: GlyphBounds<f32>,
     pub em_bounds: GlyphBounds<i32>,
-    pub advance: (i32, i32),
-    pub bearing: (i32, i32),
+    pub advance: [i32; 2],
+    pub bearing: [i32; 2],
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct GlyphBounds<T: Copy> {
     /// (Left, Top).
-    pub min: (T, T),
+    pub min: [T; 2],
     /// (Right, Bottom).
-    pub max: (T, T),
+    pub max: [T; 2],
 }
 impl<T: Copy + std::ops::Sub<Output = T>> GlyphBounds<T> {
     #[inline]
     pub fn size(&self) -> (T, T) {
-        (self.max.0 - self.min.0, self.max.1 - self.min.1)
+        (self.max[0] - self.min[0], self.max[1] - self.min[1])
     }
 }
 
@@ -111,24 +111,24 @@ impl<'a> GlyphBuilder<'a> {
         let hor_advance = self.face.glyph_hor_advance(glyph_id).unwrap_or(0) as i32;
         let ver_advance = self.face.glyph_ver_advance(glyph_id).unwrap_or(0) as i32;
 
-        let advance = (hor_advance, ver_advance);
+        let advance = [hor_advance, ver_advance];
 
         let hor_bearing = self.face.glyph_hor_side_bearing(glyph_id).unwrap_or(0) as i32;
         let ver_bearing = bounds_em.max.y as i32;
 
-        let bearing = (hor_bearing, ver_bearing);
+        let bearing = [hor_bearing, ver_bearing];
 
-        let bounds_min = (
+        let bounds_min = [
             bounds_em.min.x.round() as i32,
             bounds_em.min.y.round() as i32,
-        );
-        let bounds_max = (
+        ];
+        let bounds_max = [
             bounds_em.max.x.round() as i32,
             bounds_em.max.y.round() as i32,
-        );
+        ];
 
-        let plane_bounds_min = (plane_bounds.min.x as f32, plane_bounds.min.y as f32);
-        let plane_bounds_max = (plane_bounds.max.x as f32, plane_bounds.max.y as f32);
+        let plane_bounds_min = [plane_bounds.min.x as f32, plane_bounds.min.y as f32];
+        let plane_bounds_max = [plane_bounds.max.x as f32, plane_bounds.max.y as f32];
 
         Some(BuildConfig {
             glyph_data: GlyphData {

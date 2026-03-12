@@ -31,7 +31,7 @@ impl<T: Copy + std::ops::Sub<Output = T>> GlyphBounds<T> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct GlyphBuilder<'a> {
     pub(crate) face: &'a Face<'a>,
     pub(crate) scale: f64,

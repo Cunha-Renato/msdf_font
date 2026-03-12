@@ -1,27 +1,28 @@
-[workspace]
-resolver = "2"
-members = ["dev", "msdf_font"]
-
-[workspace.package]
+[package]
+name = "msdf_font"
 version = "0.1.0"
 edition = "2024"
 
-[workspace.dependencies]
+[dependencies]
 glam = "0.32"
 ttf-parser = "0.25"
+
+kurbo = { version = "0.13", optional = true }
+linesweeper = { version = "0.3", optional = true }
+rayon = { version = "1.0", optional = true }
+
+[dev-dependencies]
 image = "0.25"
-kurbo = "0.13"
-linesweeper = "0.3"
-rayon = "1.0"
-msdf_font.path = "msdf_font"
+# winit = "0.30"
+# l3gion.path = "../l3gion/l3gion"
+# pollster = "0.4"
+# bytemuck = "1.25"
 
-# Dev
-winit = "0.30"
-l3gion.path = "../l3gion/l3gion"
-pollster = "0.4"
-bytemuck = "1.25"
+[features]
+atlas = ["dep:rayon"]
+fix_geometry = ["dep:kurbo", "dep:linesweeper"]
 
-[workspace.lints.clippy]
+[lints.clippy]
 perf = "deny"
 unwrap_used = "deny"
 complexity = "deny"

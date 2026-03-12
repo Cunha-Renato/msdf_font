@@ -2,6 +2,12 @@
 name = "msdf_font"
 version = "0.1.0"
 edition = "2024"
+authors = ["Renato Cunha"]
+license = "MIT or Apache-2.0"
+repository = "https://github.com/Cunha-Renato/msdf_font"
+keywords = ["msdf", "sdf", "distance-field", "font-atlas"]
+categories = ["graphics", "gui"]
+description = "Msdf implementation in Rust"
 
 [dependencies]
 glam = "0.32"

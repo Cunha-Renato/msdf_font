@@ -1,6 +1,6 @@
 # msdf_font
 
-[msdfgen](https://github.com/Chlumsky/msdfgen) in rust.
+[msdfgen](https://github.com/Chlumsky/msdfgen) with atlas support in rust.
 
 Most of it is translated from the original C++ [msdfgen](https://github.com/Chlumsky/msdfgen), and some was taken from [fdsm](https://gitlab.com/Kyarei/fdsm).
 

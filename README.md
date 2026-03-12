@@ -11,12 +11,12 @@ Most of it is translated from the original C++ [msdfgen](https://github.com/Chlu
 
 ## Supports
 
-✅ MSDF
-✅ SDF
-✅ Atlas generation (feature `atlas`)
-✅ Shape correction (feature `fix_geometry`)
-❌ Error correction
-❌ Other types of distance fields
+* ✅ MSDF
+* ✅ SDF
+* ✅ Atlas generation (feature `atlas`)
+* ✅ Shape correction (feature `fix_geometry`)
+* ❌ Error correction
+* ❌ Other types of distance fields
 
 Here we can have a look at a glyph rendered without the `fix_geometry` feature.
 

@@ -17,7 +17,7 @@ fn test_time_generation() {
 
     for _ in 0..SAMPLES {
         let now = Instant::now();
-        let (_, _) = FontData::new("OpenSans.ttf").unwrap();
+        let (_, _) = FontData::new("CascadiaCode-Medium.ttf").unwrap();
         dur_sum += now.elapsed().as_millis() as usize;
     }
 
@@ -25,5 +25,6 @@ fn test_time_generation() {
 }
 
 fn main() {
-    test_time_generation();
+    // test_time_generation();
+    run_app();
 }

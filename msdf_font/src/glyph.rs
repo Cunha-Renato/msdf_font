@@ -37,6 +37,7 @@ pub struct GlyphBuilder<'a> {
     pub(crate) scale: f64,
     pub(crate) px_range: u32,
     pub(crate) field_type: FieldType,
+    #[cfg(feature = "fix_geometry")]
     pub(crate) fix_geometry: bool,
 }
 impl<'a> GlyphBuilder<'a> {
@@ -48,6 +49,7 @@ impl<'a> GlyphBuilder<'a> {
             scale,
             px_range: 2,
             field_type: FieldType::default(),
+            #[cfg(feature = "fix_geometry")]
             fix_geometry: false,
         }
     }
@@ -76,6 +78,7 @@ impl<'a> GlyphBuilder<'a> {
     /// Default is [`false`].
     ///
     /// This is super expensive to compute.
+    #[cfg(feature = "fix_geometry")]
     #[inline]
     pub const fn fix_geometry(mut self, fix_geometry: bool) -> Self {
         self.fix_geometry = fix_geometry;
@@ -176,6 +179,7 @@ impl<'a> GlyphBuilder<'a> {
                 px_range,
                 offset: bitmap_bounds.min,
                 field_type: self.field_type,
+                #[cfg(feature = "fix_geometry")]
                 fix_geometry: self.fix_geometry,
             },
             bitmap_size: (bitmap_size.x.ceil() as usize, bitmap_size.y.ceil() as usize),

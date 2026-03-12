@@ -11,10 +11,6 @@ use crate::{
 };
 use core::f64;
 use glam::DVec2;
-use i_overlay::{
-    core::{fill_rule::FillRule, overlay::ContourDirection},
-    float::{overlay::OverlayOptions, simplify::SimplifyShape},
-};
 use ttf_parser::OutlineBuilder;
 
 #[derive(Debug)]
@@ -47,6 +43,7 @@ impl Shape {
         config: GenerationConfig,
         bitmap: &mut impl BitmapData,
     ) {
+        #[cfg(feature = "fix_geometry")]
         if config.fix_geometry {
             self.resolve_shape_geometry();
         }
@@ -96,79 +93,71 @@ impl Shape {
         )
     }
 
+    #[cfg(feature = "fix_geometry")]
     fn resolve_shape_geometry(&mut self) {
+        use crate::edge::EdgeType;
+        use kurbo::{BezPath, Point};
+        use linesweeper::topology::Topology;
+
         if self.contours.is_empty() {
             return;
         }
 
-        // Convert contours to i_overlay's shape format:
-        // Vec<Vec<Vec<[f64; 2]>>> = Vec<Shape> where Shape = Vec<Contour>
-        // Each contour is a flat list of edge start points (auto-closed)
-        let shape: Vec<Vec<[f64; 2]>> = self
-            .contours
-            .iter()
-            .filter_map(|contour| {
-                if contour.edges.is_empty() {
-                    return None;
+        // Build a single BezPath from all contours
+        let mut path = BezPath::new();
+        for contour in &self.contours {
+            if contour.edges.is_empty() {
+                continue;
+            }
+
+            let mut edges = contour.edges.iter();
+            let Some(first) = edges.next() else { continue };
+
+            let start = match first.etype {
+                EdgeType::Line { p0, .. } => p0,
+                EdgeType::Quad { p0, .. } => p0,
+            };
+
+            path.move_to(Point::new(start.x, start.y));
+
+            for edge in std::iter::once(first).chain(edges) {
+                match edge.etype {
+                    EdgeType::Line { p1, .. } => path.line_to(Point::new(p1.x, p1.y)),
+                    EdgeType::Quad { p1, p2, .. } => {
+                        path.quad_to(Point::new(p1.x, p1.y), Point::new(p2.x, p2.y))
+                    }
                 }
+            }
 
-                let pts: Vec<[f64; 2]> = contour
-                    .edges
-                    .iter()
-                    .flat_map(Edge::as_lines)
-                    .map(|p| [p.x, p.y])
-                    .collect();
-
-                if pts.len() < 3 {
-                    return None;
-                }
-
-                Some(pts)
-            })
-            .collect();
-
-        if shape.is_empty() {
-            return;
+            path.close_path();
         }
 
-        // simplify() resolves self-intersections under the NonZero fill rule
-        // and returns clean non-overlapping contours
-        let result: Vec<Vec<Vec<[f64; 2]>>> = shape.simplify_shape_custom(
-            FillRule::NonZero,
-            OverlayOptions {
-                output_direction: ContourDirection::Clockwise,
-                ..Default::default()
-            },
-            Default::default(),
-        );
+        // from_path returns Result<Topology<i32>, NonClosedPath>
+        let topo = match Topology::from_path(&path, 1e-6) {
+            Ok(t) => t,
+            Err(_) => return,
+        };
 
-        if result.is_empty() {
-            return;
-        }
+        // contours() takes a closure: winding number -> is inside?
+        // NonZero rule: any non-zero winding is "inside"
+        let contours = topo.contours(|w| *w != 0);
 
         self.contours.clear();
 
-        for shape in result {
-            for poly in shape {
-                if poly.len() < 2 {
-                    continue;
-                }
-
-                let n = poly.len();
-
-                let edges = (0..n)
-                    .map(|i| {
-                        (
-                            DVec2::new(poly[i][0], poly[i][1]),
-                            DVec2::new(poly[(i + 1) % n][0], poly[(i + 1) % n][1]),
-                        )
-                    })
-                    .filter(|(p0, p1)| p0 != p1)
-                    .map(|(p0, p1)| Edge::new_line(p0, p1))
-                    .collect::<Vec<_>>();
-
-                if !edges.is_empty() {
-                    self.contours.push(Contour { edges });
+        for contour in contours.contours() {
+            for path in contour.path.iter() {
+                match path {
+                    kurbo::PathEl::MoveTo(p) => self.move_to_scaled(DVec2::new(p.x, p.y)),
+                    kurbo::PathEl::LineTo(p) => self.line_to_scaled(DVec2::new(p.x, p.y)),
+                    kurbo::PathEl::QuadTo(p0, p1) => {
+                        self.quad_to_scaled(DVec2::new(p0.x, p0.y), DVec2::new(p1.x, p1.y))
+                    }
+                    kurbo::PathEl::CurveTo(p0, p1, p2) => self.curve_to_scaled(
+                        DVec2::new(p0.x, p0.y),
+                        DVec2::new(p1.x, p1.y),
+                        DVec2::new(p2.x, p2.y),
+                    ),
+                    kurbo::PathEl::ClosePath => self.close(),
                 }
             }
         }
@@ -271,27 +260,53 @@ impl Shape {
     }
 }
 impl OutlineBuilder for Shape {
+    #[inline]
     fn move_to(&mut self, x: f32, y: f32) {
-        self.contours.push(Contour::default());
-        self.position = self.scale_point(x, y);
+        self.move_to_scaled(self.scale_point(x, y));
     }
 
+    #[inline]
     fn line_to(&mut self, x: f32, y: f32) {
         let endpoint = self.scale_point(x, y);
-
-        if endpoint != self.position {
-            if let Some(last) = self.contours.last_mut() {
-                last.edges.push(Edge::new_line(self.position, endpoint));
-            }
-
-            self.position = endpoint;
-        }
+        self.line_to_scaled(endpoint);
     }
 
+    #[inline]
     fn quad_to(&mut self, x1: f32, y1: f32, x: f32, y: f32) {
         let endpoint = self.scale_point(x, y);
         let control = self.scale_point(x1, y1);
 
+        self.quad_to_scaled(control, endpoint);
+    }
+
+    #[inline]
+    fn curve_to(&mut self, x1: f32, y1: f32, x2: f32, y2: f32, x: f32, y: f32) {
+        let p1 = self.scale_point(x1, y1);
+        let p2 = self.scale_point(x2, y2);
+        let p3 = self.scale_point(x, y);
+
+        self.curve_to_scaled(p1, p2, p3);
+    }
+
+    fn close(&mut self) {}
+}
+impl Shape {
+    fn move_to_scaled(&mut self, point: DVec2) {
+        self.contours.push(Contour::default());
+        self.position = point;
+    }
+
+    fn line_to_scaled(&mut self, point: DVec2) {
+        if point != self.position {
+            if let Some(last) = self.contours.last_mut() {
+                last.edges.push(Edge::new_line(self.position, point));
+            }
+
+            self.position = point;
+        }
+    }
+
+    fn quad_to_scaled(&mut self, control: DVec2, endpoint: DVec2) {
         if endpoint != self.position {
             if let Some(last) = self.contours.last_mut() {
                 last.edges
@@ -302,9 +317,59 @@ impl OutlineBuilder for Shape {
         }
     }
 
-    fn curve_to(&mut self, _: f32, _: f32, _: f32, _: f32, _: f32, _: f32) {
-        todo!();
-    }
+    fn curve_to_scaled(&mut self, control: DVec2, control1: DVec2, endpoint: DVec2) {
+        let p0 = self.position;
 
-    fn close(&mut self) {}
+        if endpoint != self.position {
+            let mut quads = Vec::new();
+            cubic_to_quads(p0, control, control1, endpoint, 0.03, &mut quads); // tolerance in scaled units
+
+            if let Some(contour) = self.contours.last_mut() {
+                for q in quads {
+                    contour.edges.push(Edge::new_quad(q[0], q[1], q[2]));
+                }
+            }
+
+            self.position = endpoint;
+        }
+    }
+}
+
+fn cubic_to_quads(
+    p0: DVec2,
+    p1: DVec2,
+    p2: DVec2,
+    p3: DVec2,
+    tolerance: f64,
+    out: &mut Vec<[DVec2; 3]>,
+) {
+    // Measure how far the best-fit quad deviates from the cubic.
+    // The maximum error of degree reduction is bounded by:
+    //   error ≈ (3/4) * |P1 + P2 - P0 - P3| / 4  (rough bound)
+    // A tighter bound: check the midpoint.
+    let q1 = (p1 * 1.5 - p0 * 0.5) * 0.5 + (p2 * 1.5 - p3 * 0.5) * 0.5;
+
+    // Cubic midpoint at t=0.5
+    let cubic_mid = p0 * 0.125 + p1 * 0.375 + p2 * 0.375 + p3 * 0.125;
+    // Quad midpoint at t=0.5
+    let quad_mid = p0 * 0.25 + q1 * 0.5 + p3 * 0.25;
+
+    if (cubic_mid - quad_mid).length() <= tolerance {
+        out.push([p0, q1, p3]);
+    } else {
+        let (left, right) = split_cubic(p0, p1, p2, p3, 0.5);
+        cubic_to_quads(left[0], left[1], left[2], left[3], tolerance, out);
+        cubic_to_quads(right[0], right[1], right[2], right[3], tolerance, out);
+    }
+}
+
+fn split_cubic(p0: DVec2, p1: DVec2, p2: DVec2, p3: DVec2, t: f64) -> ([DVec2; 4], [DVec2; 4]) {
+    let p01 = p0.lerp(p1, t);
+    let p12 = p1.lerp(p2, t);
+    let p23 = p2.lerp(p3, t);
+    let p012 = p01.lerp(p12, t);
+    let p123 = p12.lerp(p23, t);
+    let p0123 = p012.lerp(p123, t);
+
+    ([p0, p01, p012, p0123], [p0123, p123, p23, p3])
 }

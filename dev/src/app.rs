@@ -59,7 +59,7 @@ struct AppCore {
 }
 impl AppCore {
     fn new(window: Arc<Window>, renderer: LgRenderer) -> Self {
-        let (font_data, mut bitmap_data) = FontData::new("OpenSans.ttf").unwrap();
+        let (font_data, mut bitmap_data) = FontData::new("CascadiaCode-Medium.ttf").unwrap();
         // Saving the image just for testing.
         let _ = image::save_buffer(
             "image.png",
@@ -242,8 +242,8 @@ impl AppCore {
             .build(&self.renderer);
         let dpi = self.window.scale_factor();
         let scale = (self.font_size * dpi as f32) / self.font_data.units_per_em as f32;
-        // let text = (0x0..0x0ff).filter_map(char::from_u32).collect::<String>();
-        let text = "The quick brown fox jumped over the lazy dog.";
+        let text = (0x0..0x0ff).filter_map(char::from_u32).collect::<String>();
+        // let text = "The quick brown fox jumped over the lazy dog.";
 
         let mut pos = [0.0, self.font_size];
         let instances = text

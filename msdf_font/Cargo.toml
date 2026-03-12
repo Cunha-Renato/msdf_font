@@ -6,7 +6,9 @@ edition.workspace = true
 [dependencies]
 glam.workspace = true
 ttf-parser.workspace = true
-i_overlay.workspace = true
+
+kurbo = { workspace = true, optional = true }
+linesweeper = { workspace = true, optional = true }
 rayon = { workspace = true, optional = true }
 
 [lints]
@@ -14,3 +16,4 @@ workspace = true
 
 [features]
 atlas = ["dep:rayon"]
+fix_geometry = ["dep:kurbo", "dep:linesweeper"]

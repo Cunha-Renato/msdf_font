@@ -190,43 +190,9 @@ impl Edge {
     pub(crate) fn is_corner(&self, other: &Self, alpha: f64) -> bool {
         is_corner(self.dir(1.0), other.dir(0.0), alpha)
     }
-
-    pub(crate) fn as_lines(&self) -> Vec<DVec2> {
-        match self.etype {
-            EdgeType::Line { p0, .. } => vec![p0],
-            EdgeType::Quad { p0, p1, p2 } => {
-                let mut points = vec![p0];
-                adaptive_subdivide(p0, p1, p2, &mut points, 0.01);
-                points
-            }
-        }
-    }
 }
 
 #[inline]
 fn is_corner(a: DVec2, b: DVec2, alpha: f64) -> bool {
     a.dot(b) <= 0.0 || a.cross(b).abs() > alpha
-}
-
-fn adaptive_subdivide(p0: DVec2, p1: DVec2, p2: DVec2, points: &mut Vec<DVec2>, tolerance: f64) {
-    let m01 = p0.midpoint(p1);
-    let m12 = p1.midpoint(p2);
-    let mid = m01.midpoint(m12);
-
-    let d = p2 - p0;
-    let d_len_sq = d.length_squared();
-
-    let dist = if d_len_sq < 1e-10 {
-        (p1 - p0).length()
-    } else {
-        let p21 = p1 - p2;
-        (p21.x * d.y - p21.y * d.x).abs() / d_len_sq.sqrt()
-    };
-
-    if dist <= tolerance {
-        points.push(p2);
-    } else {
-        adaptive_subdivide(p0, m01, mid, points, tolerance);
-        adaptive_subdivide(mid, m12, p2, points, tolerance);
-    }
 }

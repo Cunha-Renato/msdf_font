@@ -17,6 +17,7 @@ pub(crate) struct GenerationConfig {
     pub(crate) px_range: f64,
     pub(crate) offset: DVec2,
     pub(crate) field_type: FieldType,
+    #[cfg(feature = "fix_geometry")]
     pub(crate) fix_geometry: bool,
 }
 

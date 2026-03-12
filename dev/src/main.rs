@@ -25,6 +25,6 @@ fn test_time_generation() {
 }
 
 fn main() {
-    // test_time_generation();
+    test_time_generation();
     run_app();
 }

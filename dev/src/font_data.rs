@@ -46,12 +46,9 @@ impl FontData {
                 line_height,
                 units_per_em: f64::from(face.units_per_em()),
                 px_range: px_range as f64,
-                atlas_size: [
-                    atlas.bitmap_data.width as f32,
-                    atlas.bitmap_data.height as f32,
-                ],
+                atlas_size: [atlas.bitmap.width as f32, atlas.bitmap.height as f32],
             },
-            atlas.bitmap_data,
+            atlas.bitmap,
         ))
     }
 }

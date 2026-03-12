@@ -98,16 +98,16 @@ impl<'a> GlyphBuilder<'a> {
 
         let build_config = self.prepare_for_build(&mut shape, c)?;
 
-        let mut bitmap_data = GlyphBitmapData::new(
+        let mut bitmap = GlyphBitmapData::new(
             build_config.bitmap_size.0,
             build_config.bitmap_size.1,
             image_type,
         );
 
-        shape.generate_bitmap(build_config.generation_config, &mut bitmap_data);
+        shape.generate_bitmap(build_config.generation_config, &mut bitmap);
 
         Some(Glyph {
-            bitmap_data,
+            bitmap,
             glyph_data: build_config.glyph_data,
         })
     }
@@ -188,7 +188,7 @@ impl<'a> GlyphBuilder<'a> {
 }
 
 pub struct Glyph<T: BitmapData> {
-    pub bitmap_data: T,
+    pub bitmap: T,
     pub glyph_data: GlyphData,
 }
 

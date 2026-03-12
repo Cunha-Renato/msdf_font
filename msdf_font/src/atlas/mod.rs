@@ -56,8 +56,8 @@ impl<'a> AtlasBuilder for GlyphBuilder<'a> {
             FieldType::Msdf { .. } => BitmapImageType::Rgb8,
             FieldType::Sdf => BitmapImageType::L8,
         };
-        let mut bitmap_data = GlyphBitmapData::new(packer.width, packer.height, image_type);
-        let bitmap_ptr = &mut bitmap_data as *mut GlyphBitmapData as usize;
+        let mut bitmap = GlyphBitmapData::new(packer.width, packer.height, image_type);
+        let bitmap_ptr = &mut bitmap as *mut GlyphBitmapData as usize;
 
         let glyph_table = shape_configs
             .into_par_iter()
@@ -97,7 +97,7 @@ impl<'a> AtlasBuilder for GlyphBuilder<'a> {
             .collect();
 
         Some(Atlas {
-            bitmap_data,
+            bitmap,
             glyph_table,
         })
     }
@@ -106,7 +106,7 @@ impl<'a> AtlasBuilder for GlyphBuilder<'a> {
 /// Represents the glyph atlas.
 pub struct Atlas {
     /// Bitmap of the entire atlas.
-    pub bitmap_data: GlyphBitmapData,
+    pub bitmap: GlyphBitmapData,
     /// Table of data for glyphs.
     pub glyph_table: HashMap<char, AtlasGlyphData>,
 }

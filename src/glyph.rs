@@ -115,6 +115,10 @@ impl<'a> GlyphBuilder<'a> {
         self.face.outline_glyph(glyph_id, shape);
 
         let mut bitmap_bounds = shape.bounds();
+        let bitmap_size = bitmap_bounds.size();
+        if bitmap_size.x.ceil() as usize == 0 || bitmap_size.y.ceil() as usize == 0 {
+            return None;
+        }
 
         // Glyph Bounds in em scale, (same as in the font file).
         let mut bounds_em = bitmap_bounds;
@@ -126,9 +130,6 @@ impl<'a> GlyphBuilder<'a> {
         bitmap_bounds.max += DVec2::splat(self.generation_config.px_range);
         let bitmap_size = bitmap_bounds.size();
 
-        if bitmap_size.x.ceil() as usize == 0 || bitmap_size.y.ceil() as usize == 0 {
-            return None;
-        }
 
         // Glyph Bounds in em scale, (same as in the font file), with the padding.
         // We need this for rendering.

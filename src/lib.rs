@@ -1,6 +1,5 @@
 mod bitmap;
 mod contour;
-mod contour_combiner;
 mod distance;
 mod edge;
 mod edge_color;

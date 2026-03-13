@@ -1,41 +1,37 @@
-use crate::{contour_combiner::ContourCombiner, edge_selector::EdgeSelector, shape::Shape};
+use crate::{edge_selector::EdgeSelector, shape::Shape};
 use glam::DVec2;
-use std::marker::PhantomData;
 
-pub(crate) struct ShapeDistanceFinder<'a, E: EdgeSelector, C: ContourCombiner<E>> {
+pub(crate) struct ShapeDistanceFinder<'a, E: EdgeSelector> {
     shape: &'a Shape,
-    combiner: C,
-    _p: PhantomData<E>,
+    edge_selector: E,
 }
-impl<'a, E: EdgeSelector, C: ContourCombiner<E>> ShapeDistanceFinder<'a, E, C> {
-    pub(crate) fn new(shape: &'a Shape, combiner: C) -> Self {
+impl<'a, E: EdgeSelector> ShapeDistanceFinder<'a, E> {
+    pub(crate) fn new(shape: &'a Shape) -> Self {
         Self {
             shape,
-            combiner,
-            _p: PhantomData,
+            edge_selector: E::default(),
         }
     }
 
     pub(crate) fn distance(&mut self, p: DVec2) -> E::Distance {
-        self.combiner.reset(p);
+        self.edge_selector.reset(p);
 
-        for (i, contour) in self.shape.contours.iter().enumerate() {
+        for contour in &self.shape.contours {
             let len = contour.edges.len();
+
             if len == 0 {
                 continue;
             }
-
-            let selector = self.combiner.edge_selector(i);
 
             for i in 0..len {
                 let prev = &contour.edges[(i + len - 1) % len];
                 let curr = &contour.edges[i];
                 let next = &contour.edges[(i + 1) % len];
 
-                selector.add_edge(prev, curr, next);
+                self.edge_selector.add_edge(prev, curr, next);
             }
         }
 
-        self.combiner.distance()
+        self.edge_selector.distance()
     }
 }

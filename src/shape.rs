@@ -1,7 +1,6 @@
 use crate::{
     BitmapData, Bounds, FieldType, GenerationConfig,
     contour::Contour,
-    contour_combiner::{ContourCombiner, SimpleContourCombiner},
     edge::Edge,
     edge_color::EdgeColor,
     edge_selector::{
@@ -57,14 +56,13 @@ impl Shape {
         }
     }
 
-    fn generate_distance_field<E: EdgeSelector, C: ContourCombiner<E>>(
+    fn generate_distance_field<E: EdgeSelector>(
         &self,
         bitmap: &mut impl BitmapData,
         px_range: f64,
         offset: DVec2,
     ) {
-        let contour_combiner = C::new(self);
-        let mut shape_distance_finder = ShapeDistanceFinder::new(self, contour_combiner);
+        let mut shape_distance_finder = ShapeDistanceFinder::<E>::new(self);
         for y in 0..bitmap.height() {
             for x in 0..bitmap.width() {
                 let p =
@@ -78,15 +76,11 @@ impl Shape {
     }
 
     fn generate_sdf(&self, config: GenerationConfig, bitmap: &mut impl BitmapData) {
-        self.generate_distance_field::<TrueDistanceSelector, SimpleContourCombiner<_>>(
-            bitmap,
-            config.px_range,
-            config.offset,
-        )
+        self.generate_distance_field::<TrueDistanceSelector>(bitmap, config.px_range, config.offset)
     }
 
     fn generate_msdf(&self, config: GenerationConfig, bitmap: &mut impl BitmapData) {
-        self.generate_distance_field::<MultiDistanceSelector, SimpleContourCombiner<_>>(
+        self.generate_distance_field::<MultiDistanceSelector>(
             bitmap,
             config.px_range,
             config.offset,

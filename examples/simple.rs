@@ -11,9 +11,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     #[cfg(not(feature = "atlas"))]
     let char_data = 'ç';
     #[cfg(feature = "atlas")]
-    let char_vec = (0..=0xff).filter_map(char::from_u32).collect::<Vec<_>>();
-    #[cfg(feature = "atlas")]
-    let char_data = &char_vec;
+    let char_data = (0..=0xff).filter_map(char::from_u32);
 
     let msdf_builder = GlyphBuilder::new(&face)
         .field_type(FieldType::Msdf { max_angle: 3.0 })
@@ -37,7 +35,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         #[cfg(feature = "atlas")]
         let (msdf, sdf) = (
             msdf_builder
-                .build_atlas(char_data)
+                .build_atlas(char_data.clone())
                 .ok_or("Failed to create msdf atlas")?,
             sdf_builder
                 .build_atlas(char_data)

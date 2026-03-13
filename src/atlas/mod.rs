@@ -17,7 +17,7 @@ pub struct AtlasGlyphData {
 }
 
 pub trait AtlasBuilder {
-    fn build_atlas(self, c: &[char]) -> Option<Atlas>;
+    fn build_atlas(self, c: impl IntoIterator<Item = char>) -> Option<Atlas>;
 }
 impl<'a> AtlasBuilder for GlyphBuilder<'a> {
     /// Returns [`None`] if no glyph could be build.
@@ -25,7 +25,7 @@ impl<'a> AtlasBuilder for GlyphBuilder<'a> {
     /// See [`crate::GlyphBuilder::build`].
     ///
     /// For the packing it uses a simple height based packer.
-    fn build_atlas(self, c: &[char]) -> Option<Atlas> {
+    fn build_atlas(self, c: impl IntoIterator<Item = char>) -> Option<Atlas> {
         struct ShapeConfig {
             config: BuildConfig,
             shape: Shape,
@@ -33,16 +33,12 @@ impl<'a> AtlasBuilder for GlyphBuilder<'a> {
         }
 
         let mut shape_configs = c
-            .iter()
+            .into_iter()
             .filter_map(|c| {
                 let mut shape = Shape::new(self.scale);
-                let config = self.prepare_for_build(&mut shape, *c)?;
+                let config = self.prepare_for_build(&mut shape, c)?;
 
-                Some(ShapeConfig {
-                    config,
-                    shape,
-                    c: *c,
-                })
+                Some(ShapeConfig { config, shape, c })
             })
             .collect::<Vec<_>>();
 

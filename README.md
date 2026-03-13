@@ -2,7 +2,12 @@
 
 [msdfgen](https://github.com/Chlumsky/msdfgen) with atlas support in rust.
 
-Most of it is translated from the original C++ [msdfgen](https://github.com/Chlumsky/msdfgen), and some was taken from [fdsm](https://gitlab.com/Kyarei/fdsm).
+Most of it is translated from the original C++ [msdfgen](https://github.com/Chlumsky/msdfgen), and some was taken from [fdsm](https://crates.io/crates/fdsm).
+
+## Similar Crates
+
+* [msdf](https://crates.io/crates/msdf) provides safe bindings for [msdfgen](https://github.com/Chlumsky/msdfgen)
+* [fdsm](https://crates.io/crates/fdsm) rust implementation [msdfgen](https://crates.io/crates/fdsm) with a lot more similarities to the original
 
 ## Crate Features
 

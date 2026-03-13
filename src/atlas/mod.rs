@@ -52,7 +52,7 @@ impl<'a> AtlasBuilder for GlyphBuilder<'a> {
 
         let packer = packer::Packer::pack(&mut shape_configs, |sc| sc.config.bitmap_size);
 
-        let image_type = match &self.field_type {
+        let image_type = match &self.generation_config.field_type {
             FieldType::Msdf { .. } => BitmapImageType::Rgb8,
             FieldType::Sdf => BitmapImageType::L8,
         };

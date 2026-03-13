@@ -12,7 +12,7 @@ pub enum FieldType {
     Sdf,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy)]
 pub(crate) struct GenerationConfig {
     pub(crate) px_range: f64,
     pub(crate) offset: DVec2,

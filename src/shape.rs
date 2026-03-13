@@ -68,17 +68,19 @@ impl Shape {
                 let p =
                     DVec2::new(x as f64 + 0.5, bitmap.height() as f64 - (y as f64 + 0.5)) + offset;
 
-                let min_dist = shape_distance_finder.distance(p);
-
-                min_dist.to_bytes(px_range, |b| bitmap.set_px(b, x, y));
+                shape_distance_finder
+                    .distance(p)
+                    .to_bytes(px_range, |b| bitmap.set_px(b, x, y));
             }
         }
     }
 
+    #[inline]
     fn generate_sdf(&self, config: GenerationConfig, bitmap: &mut impl BitmapData) {
         self.generate_distance_field::<TrueDistanceSelector>(bitmap, config.px_range, config.offset)
     }
 
+    #[inline]
     fn generate_msdf(&self, config: GenerationConfig, bitmap: &mut impl BitmapData) {
         self.generate_distance_field::<MultiDistanceSelector>(
             bitmap,
@@ -253,37 +255,6 @@ impl Shape {
         DVec2::new(f64::from(x), f64::from(y)) * self.scale
     }
 }
-impl OutlineBuilder for Shape {
-    #[inline]
-    fn move_to(&mut self, x: f32, y: f32) {
-        self.move_to_scaled(self.scale_point(x, y));
-    }
-
-    #[inline]
-    fn line_to(&mut self, x: f32, y: f32) {
-        let endpoint = self.scale_point(x, y);
-        self.line_to_scaled(endpoint);
-    }
-
-    #[inline]
-    fn quad_to(&mut self, x1: f32, y1: f32, x: f32, y: f32) {
-        let endpoint = self.scale_point(x, y);
-        let control = self.scale_point(x1, y1);
-
-        self.quad_to_scaled(control, endpoint);
-    }
-
-    #[inline]
-    fn curve_to(&mut self, x1: f32, y1: f32, x2: f32, y2: f32, x: f32, y: f32) {
-        let p1 = self.scale_point(x1, y1);
-        let p2 = self.scale_point(x2, y2);
-        let p3 = self.scale_point(x, y);
-
-        self.curve_to_scaled(p1, p2, p3);
-    }
-
-    fn close(&mut self) {}
-}
 impl Shape {
     fn move_to_scaled(&mut self, point: DVec2) {
         self.contours.push(Contour::default());
@@ -327,6 +298,37 @@ impl Shape {
             self.position = endpoint;
         }
     }
+}
+impl OutlineBuilder for Shape {
+    #[inline]
+    fn move_to(&mut self, x: f32, y: f32) {
+        self.move_to_scaled(self.scale_point(x, y));
+    }
+
+    #[inline]
+    fn line_to(&mut self, x: f32, y: f32) {
+        let endpoint = self.scale_point(x, y);
+        self.line_to_scaled(endpoint);
+    }
+
+    #[inline]
+    fn quad_to(&mut self, x1: f32, y1: f32, x: f32, y: f32) {
+        let endpoint = self.scale_point(x, y);
+        let control = self.scale_point(x1, y1);
+
+        self.quad_to_scaled(control, endpoint);
+    }
+
+    #[inline]
+    fn curve_to(&mut self, x1: f32, y1: f32, x2: f32, y2: f32, x: f32, y: f32) {
+        let p1 = self.scale_point(x1, y1);
+        let p2 = self.scale_point(x2, y2);
+        let p3 = self.scale_point(x, y);
+
+        self.curve_to_scaled(p1, p2, p3);
+    }
+
+    fn close(&mut self) {}
 }
 
 fn cubic_to_quads(

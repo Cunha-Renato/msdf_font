@@ -33,24 +33,21 @@ impl<T: Copy + std::ops::Sub<Output = T>> GlyphBounds<T> {
 
 #[derive(Debug, Clone, Copy)]
 pub struct GlyphBuilder<'a> {
+    pub(crate) generation_config: GenerationConfig,
     pub(crate) face: &'a Face<'a>,
     pub(crate) scale: f64,
-    pub(crate) px_range: u32,
-    pub(crate) field_type: FieldType,
-    #[cfg(feature = "fix_geometry")]
-    pub(crate) fix_geometry: bool,
 }
 impl<'a> GlyphBuilder<'a> {
     pub fn new(face: &'a Face) -> Self {
         let scale = scale_value(16.0, face);
 
         Self {
+            generation_config: GenerationConfig {
+                px_range: 2.0,
+                ..Default::default()
+            },
             face,
             scale,
-            px_range: 2,
-            field_type: FieldType::default(),
-            #[cfg(feature = "fix_geometry")]
-            fix_geometry: false,
         }
     }
 
@@ -63,15 +60,15 @@ impl<'a> GlyphBuilder<'a> {
 
     /// Default is 2.
     #[inline]
-    pub const fn px_range(mut self, px_range: u32) -> Self {
-        self.px_range = px_range;
+    pub fn px_range(mut self, px_range: u32) -> Self {
+        self.generation_config.px_range = f64::from(px_range);
         self
     }
 
     /// Default is [`crate::FieldType::Sdf`].
     #[inline]
     pub const fn field_type(mut self, field_type: FieldType) -> Self {
-        self.field_type = field_type;
+        self.generation_config.field_type = field_type;
         self
     }
 
@@ -81,7 +78,7 @@ impl<'a> GlyphBuilder<'a> {
     #[cfg(feature = "fix_geometry")]
     #[inline]
     pub const fn fix_geometry(mut self, fix_geometry: bool) -> Self {
-        self.fix_geometry = fix_geometry;
+        self.generation_config.fix_geometry = fix_geometry;
         self
     }
 
@@ -91,7 +88,7 @@ impl<'a> GlyphBuilder<'a> {
     pub fn build(self, c: char) -> Option<Glyph<GlyphBitmapData>> {
         let mut shape = Shape::new(self.scale);
 
-        let image_type = match &self.field_type {
+        let image_type = match &self.generation_config.field_type {
             FieldType::Msdf { .. } => BitmapImageType::Rgb8,
             FieldType::Sdf => BitmapImageType::L8,
         };
@@ -113,7 +110,6 @@ impl<'a> GlyphBuilder<'a> {
     }
 
     pub(crate) fn prepare_for_build(&self, shape: &mut Shape, c: char) -> Option<BuildConfig> {
-        let px_range = f64::from(self.px_range);
         let glyph_id = self.face.glyph_index(c)?;
 
         self.face.outline_glyph(glyph_id, shape);
@@ -126,8 +122,8 @@ impl<'a> GlyphBuilder<'a> {
         bounds_em.max /= self.scale;
 
         // Padding for px_range.
-        bitmap_bounds.min -= DVec2::splat(px_range);
-        bitmap_bounds.max += DVec2::splat(px_range);
+        bitmap_bounds.min -= DVec2::splat(self.generation_config.px_range);
+        bitmap_bounds.max += DVec2::splat(self.generation_config.px_range);
         let bitmap_size = bitmap_bounds.size();
 
         if bitmap_size.x.ceil() as usize == 0 || bitmap_size.y.ceil() as usize == 0 {
@@ -162,6 +158,9 @@ impl<'a> GlyphBuilder<'a> {
         let plane_bounds_min = [plane_bounds.min.x as f32, plane_bounds.min.y as f32];
         let plane_bounds_max = [plane_bounds.max.x as f32, plane_bounds.max.y as f32];
 
+        let mut generation_config = self.generation_config;
+        generation_config.offset = bitmap_bounds.min;
+
         Some(BuildConfig {
             glyph_data: GlyphData {
                 plane_bounds: GlyphBounds {
@@ -175,13 +174,7 @@ impl<'a> GlyphBuilder<'a> {
                 advance,
                 bearing,
             },
-            generation_config: GenerationConfig {
-                px_range,
-                offset: bitmap_bounds.min,
-                field_type: self.field_type,
-                #[cfg(feature = "fix_geometry")]
-                fix_geometry: self.fix_geometry,
-            },
+            generation_config,
             bitmap_size: (bitmap_size.x.ceil() as usize, bitmap_size.y.ceil() as usize),
         })
     }

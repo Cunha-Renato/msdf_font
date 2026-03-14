@@ -34,29 +34,6 @@ impl Vertex {
     }
 }
 
-const VERTICES: &[Vertex] = &[
-    Vertex {
-        position: [-1.0, 1.0],
-        tex_coords: [0.0, 0.0],
-        use_msdf: 0,
-    }, // A
-    Vertex {
-        position: [1.0, 1.0],
-        tex_coords: [1.0, 0.0],
-        use_msdf: 0,
-    }, // B/
-    Vertex {
-        position: [1.0, -1.0],
-        tex_coords: [1.0, 1.0],
-        use_msdf: 0,
-    }, // C
-    Vertex {
-        position: [-1.0, -1.0],
-        tex_coords: [0.0, 1.0],
-        use_msdf: 0,
-    }, // D
-];
-
 const INDICES: [u32; 6] = [0, 3, 1, 1, 3, 2];
 
 struct WgpuState {
@@ -338,8 +315,10 @@ struct Font {
     msdf: Atlas,
     #[cfg(feature = "atlas")]
     sdf: Atlas,
-    units_per_em: f32,
+    #[cfg(feature = "atlas")]
     line_space: f32,
+
+    units_per_em: f32,
 }
 impl Font {
     fn new() -> Self {
@@ -347,6 +326,7 @@ impl Font {
             ttf_parser::Face::parse(include_bytes!("assets/OpenSans-Medium.ttf"), 0).unwrap();
 
         let units_per_em = face.units_per_em() as f32;
+        #[cfg(feature = "atals")]
         let line_space = face.ascender() - face.descender() + face.line_gap();
 
         let sdf_builder = GlyphBuilder::new(&face).px_range(4).px_size(50);
@@ -378,6 +358,7 @@ impl Font {
             msdf,
             sdf,
             units_per_em,
+            #[cfg(feature = "atals")]
             line_space: line_space as f32,
         }
     }

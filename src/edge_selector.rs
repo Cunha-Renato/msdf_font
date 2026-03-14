@@ -7,30 +7,76 @@ use crate::{
 use glam::DVec2;
 
 pub(crate) trait EdgeSelectorDistance {
+    type Normalized;
     type Bytes;
 
-    fn to_bytes(self, px_range: f64) -> Self::Bytes;
+    fn normalize(self, px_range: f64) -> Self::Normalized;
+    fn normalize_to_bytes(self, px_range: f64) -> Self::Bytes;
+    fn to_bytes(self) -> Self::Bytes;
+    fn from_bytes(bytes: Self::Bytes, px_range: f64) -> Self;
 }
 impl EdgeSelectorDistance for f64 {
+    type Normalized = Self;
     type Bytes = [u8; 1];
 
     #[inline]
-    fn to_bytes(self, px_range: f64) -> Self::Bytes {
-        let normalized = (self / px_range + 0.5).clamp(0.0, 1.0);
+    fn normalize(self, px_range: f64) -> Self::Normalized {
+        (self / px_range + 0.5).clamp(0.0, 1.0)
+    }
 
-        [(normalized * 255.0).round() as u8]
+    #[inline]
+    fn normalize_to_bytes(self, px_range: f64) -> Self::Bytes {
+        self.normalize(px_range).to_bytes()
+    }
+
+    #[inline]
+    fn to_bytes(self) -> Self::Bytes {
+        [(self * 255.0).round() as u8]
+    }
+
+    fn from_bytes(bytes: Self::Bytes, px_range: f64) -> Self {
+        let normalized = bytes[0] as f64 / 255.0;
+
+        (normalized - 0.5) * px_range
     }
 }
 impl EdgeSelectorDistance for MultiDistance {
+    type Normalized = [f64; 3];
     type Bytes = [u8; 3];
 
     #[inline]
-    fn to_bytes(self, px_range: f64) -> Self::Bytes {
+    fn normalize(self, px_range: f64) -> Self::Normalized {
         [
-            self.r.to_bytes(px_range)[0],
-            self.g.to_bytes(px_range)[0],
-            self.b.to_bytes(px_range)[0],
+            self.r.normalize(px_range),
+            self.g.normalize(px_range),
+            self.b.normalize(px_range),
         ]
+    }
+
+    #[inline]
+    fn normalize_to_bytes(self, px_range: f64) -> Self::Bytes {
+        [
+            self.r.normalize_to_bytes(px_range)[0],
+            self.g.normalize_to_bytes(px_range)[0],
+            self.b.normalize_to_bytes(px_range)[0],
+        ]
+    }
+
+    #[inline]
+    fn to_bytes(self) -> Self::Bytes {
+        [
+            self.r.to_bytes()[0],
+            self.g.to_bytes()[0],
+            self.b.to_bytes()[0],
+        ]
+    }
+
+    fn from_bytes(bytes: Self::Bytes, px_range: f64) -> Self {
+        Self {
+            r: f64::from_bytes([bytes[0]], px_range),
+            g: f64::from_bytes([bytes[1]], px_range),
+            b: f64::from_bytes([bytes[2]], px_range),
+        }
     }
 }
 

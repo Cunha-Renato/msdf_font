@@ -78,14 +78,14 @@ pub struct Atlas {
     packer: Packer,
 }
 impl Atlas {
-    pub fn sdf(&mut self) -> GlyphBitmapData<1> {
+    pub fn sdf(&mut self) -> GlyphBitmapData<u8, 1> {
         self.gen_field(|g, region| {
             g.shape
                 .generate_sdf(g.build_config.px_range, g.build_config.offset, region)
         })
     }
 
-    pub fn msdf(&mut self, max_angle: f64) -> GlyphBitmapData<3> {
+    pub fn msdf(&mut self, max_angle: f64) -> GlyphBitmapData<u8, 3> {
         self.gen_field(|g, region| {
             g.shape.generate_msdf(
                 g.build_config.px_range,

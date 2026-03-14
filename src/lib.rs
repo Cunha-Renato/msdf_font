@@ -5,6 +5,7 @@ mod distance;
 mod edge;
 mod edge_color;
 mod edge_selector;
+mod error_correction;
 mod glyph;
 mod shape;
 mod shape_distance_finder;

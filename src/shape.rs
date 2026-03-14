@@ -1,5 +1,5 @@
 use crate::{
-    BitmapData,
+    BitmapData, GlyphBitmapData,
     bounds::Bounds,
     contour::Contour,
     edge::Edge,
@@ -38,6 +38,29 @@ impl Shape {
         bounds
     }
 
+    fn generate_normalized_distance_field<
+        E: EdgeSelector<Distance = impl EdgeSelectorDistance<Normalized = P>>,
+        P,
+        B: BitmapData<Pixel = P>,
+    >(
+        &self,
+        bitmap: &mut B,
+        px_range: f64,
+        offset: DVec2,
+    ) {
+        let mut shape_distance_finder = ShapeDistanceFinder::<E>::new(self);
+        for y in 0..bitmap.height() {
+            for x in 0..bitmap.width() {
+                let p =
+                    DVec2::new(x as f64 + 0.5, bitmap.height() as f64 - (y as f64 + 0.5)) + offset;
+
+                let bytes = shape_distance_finder.distance(p).normalize(px_range);
+
+                bitmap.set_px(bytes, x, y);
+            }
+        }
+    }
+
     fn generate_distance_field<
         E: EdgeSelector<Distance = impl EdgeSelectorDistance<Bytes = P>>,
         P,
@@ -54,7 +77,9 @@ impl Shape {
                 let p =
                     DVec2::new(x as f64 + 0.5, bitmap.height() as f64 - (y as f64 + 0.5)) + offset;
 
-                let bytes = shape_distance_finder.distance(p).to_bytes(px_range);
+                let bytes = shape_distance_finder
+                    .distance(p)
+                    .normalize_to_bytes(px_range);
 
                 bitmap.set_px(bytes, x, y);
             }
@@ -79,8 +104,16 @@ impl Shape {
         max_angle: f64,
         bitmap: &mut impl BitmapData<Pixel = [u8; 3]>,
     ) {
+        let mut normalized_bitmap = GlyphBitmapData::<f64, 3>::new(bitmap.width(), bitmap.height());
+
         self.coloring_simple(max_angle, 0);
-        self.generate_distance_field::<MultiDistanceSelector, _, _>(bitmap, px_range, offset)
+        self.generate_normalized_distance_field::<MultiDistanceSelector, _, _>(
+            &mut normalized_bitmap,
+            px_range,
+            offset,
+        );
+        //TODO: Error Correction.
+        //TODO: Copy to u8 bitmap.
     }
 
     #[cfg(feature = "fix_geometry")]

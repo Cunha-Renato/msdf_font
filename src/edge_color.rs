@@ -30,6 +30,30 @@ impl EdgeColor {
         }
     }
 
+    /// Returns true if the red channel is on for this color.
+    #[inline]
+    pub(crate) fn has_red(&self) -> bool {
+        (self.0 & 1) != 0
+    }
+
+    /// Returns true if the green channel is on for this color.
+    #[inline]
+    pub(crate) fn has_green(&self) -> bool {
+        (self.0 & 2) != 0
+    }
+
+    /// Returns true if the blue channel is on for this color.
+    #[inline]
+    pub(crate) fn has_blue(&self) -> bool {
+        (self.0 & 4) != 0
+    }
+
+    /// Returns true if this color has at least two channels set.
+    #[inline]
+    pub(crate) fn is_bright(&self) -> bool {
+        (self.0 & (self.0 - 1)) != 0
+    }
+
     /// Creates a new color from the underlying bits.
     ///
     /// Numbering the bits such that 0 is the least significant bit:

@@ -13,29 +13,35 @@ pub trait BitmapData {
 
 /// Struct representing the bitmap data.
 #[derive(Debug)]
-pub struct GlyphBitmapData<const N: usize> {
-    bytes: Vec<[u8; N]>,
+pub struct GlyphBitmapData<T: Copy, const N: usize> {
+    bytes: Vec<[T; N]>,
     /// Width in pixels.
     pub width: usize,
     /// Height in pixels.
     pub height: usize,
 }
-impl<const N: usize> GlyphBitmapData<N> {
+impl<const N: usize> GlyphBitmapData<u8, N> {
     #[inline]
     pub fn bytes(&self) -> &[u8] {
         self.bytes.as_flattened()
     }
 
+    #[inline]
+    pub fn bytes_mut(&mut self) -> &mut [u8] {
+        self.bytes.as_flattened_mut()
+    }
+}
+impl<T: Default + Copy, const N: usize> GlyphBitmapData<T, N> {
     pub(crate) fn new(width: usize, height: usize) -> Self {
         Self {
-            bytes: vec![[0u8; N]; width * height],
+            bytes: vec![[T::default(); N]; width * height],
             width,
             height,
         }
     }
 }
-impl<const N: usize> BitmapData for GlyphBitmapData<N> {
-    type Pixel = [u8; N];
+impl<T: Copy, const N: usize> BitmapData for GlyphBitmapData<T, N> {
+    type Pixel = [T; N];
 
     #[inline]
     fn width(&self) -> usize {
@@ -47,14 +53,14 @@ impl<const N: usize> BitmapData for GlyphBitmapData<N> {
         self.height
     }
 
-    fn set_px(&mut self, px: [u8; N], x: usize, y: usize) {
+    fn set_px(&mut self, px: Self::Pixel, x: usize, y: usize) {
         let j = y * self.width + x;
 
         (0..N).for_each(|i| self.bytes[j][i] = px[i]);
     }
 
     #[inline]
-    fn get_px(&self, x: usize, y: usize) -> [u8; N] {
+    fn get_px(&self, x: usize, y: usize) -> Self::Pixel {
         self.bytes[y * self.width + x]
     }
 }

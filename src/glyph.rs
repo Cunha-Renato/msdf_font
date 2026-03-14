@@ -158,7 +158,7 @@ pub struct Glyph {
     pub(crate) shape: Shape,
 }
 impl Glyph {
-    pub fn sdf(&self) -> GlyphBitmapData<1> {
+    pub fn sdf(&self) -> GlyphBitmapData<u8, 1> {
         let bitmap_size = self.build_config.bitmap_size;
         let mut bitmap = GlyphBitmapData::new(bitmap_size[0], bitmap_size[1]);
 
@@ -171,7 +171,7 @@ impl Glyph {
         bitmap
     }
 
-    pub fn msdf(&mut self, max_angle: f64) -> GlyphBitmapData<3> {
+    pub fn msdf(&mut self, max_angle: f64) -> GlyphBitmapData<u8, 3> {
         let bitmap_size = self.build_config.bitmap_size;
         let mut bitmap = GlyphBitmapData::new(bitmap_size[0], bitmap_size[1]);
 

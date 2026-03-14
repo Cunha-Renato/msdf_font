@@ -26,8 +26,8 @@ pub struct GlyphBounds<T: Copy> {
 }
 impl<T: Copy + std::ops::Sub<Output = T>> GlyphBounds<T> {
     #[inline]
-    pub fn size(&self) -> (T, T) {
-        (self.max[0] - self.min[0], self.max[1] - self.min[1])
+    pub fn size(&self) -> [T; 2] {
+        [self.max[0] - self.min[0], self.max[1] - self.min[1]]
     }
 }
 
@@ -129,7 +129,6 @@ impl<'a> GlyphBuilder<'a> {
         bitmap_bounds.min -= DVec2::splat(self.generation_config.px_range);
         bitmap_bounds.max += DVec2::splat(self.generation_config.px_range);
         let bitmap_size = bitmap_bounds.size();
-
 
         // Glyph Bounds in em scale, (same as in the font file), with the padding.
         // We need this for rendering.

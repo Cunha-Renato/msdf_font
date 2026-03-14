@@ -26,6 +26,7 @@ pollster = "0.4"
 bytemuck = { version = "1.0", features = ["derive"] }
 
 [features]
+default = ["dep:rayon"]
 atlas = ["dep:rayon"]
 fix_geometry = ["dep:kurbo", "dep:linesweeper"]
 

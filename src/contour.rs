@@ -1,4 +1,4 @@
-use crate::{Bounds, edge::Edge};
+use crate::{bounds::Bounds, edge::Edge};
 
 #[derive(Debug, Default)]
 pub(crate) struct Contour {

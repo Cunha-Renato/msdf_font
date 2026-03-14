@@ -1,13 +1,15 @@
 use crate::bitmap::{BitmapData, GlyphBitmapData};
 
-pub(super) struct BitmapDataRegion<'a> {
-    pub(super) data: &'a mut GlyphBitmapData,
+pub(super) struct BitmapDataRegion<'a, const N: usize> {
+    pub(super) data: &'a mut GlyphBitmapData<N>,
     pub(super) x: usize,
     pub(super) y: usize,
     pub(super) width: usize,
     pub(super) height: usize,
 }
-impl BitmapData for BitmapDataRegion<'_> {
+impl<const N: usize> BitmapData for BitmapDataRegion<'_, N> {
+    type Pixel = [u8; N];
+
     #[inline]
     fn width(&self) -> usize {
         self.width
@@ -19,12 +21,12 @@ impl BitmapData for BitmapDataRegion<'_> {
     }
 
     #[inline]
-    fn set_px(&mut self, px: &[u8], x: usize, y: usize) {
+    fn set_px(&mut self, px: Self::Pixel, x: usize, y: usize) {
         self.data.set_px(px, self.x + x, self.y + y);
     }
 
     #[inline]
-    fn get_px(&self, x: usize, y: usize, f: impl FnOnce(&[u8])) {
-        self.data.get_px(self.x + x, self.y + y, f);
+    fn get_px(&self, x: usize, y: usize) -> Self::Pixel {
+        self.data.get_px(self.x + x, self.y + y)
     }
 }

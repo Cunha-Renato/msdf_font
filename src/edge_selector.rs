@@ -7,25 +7,30 @@ use crate::{
 use glam::DVec2;
 
 pub(crate) trait EdgeSelectorDistance {
-    // fn resolve(&self) -> f64;
-    fn to_bytes<F: FnOnce(&[u8])>(self, px_range: f64, f: F);
+    type Bytes;
+
+    fn to_bytes(self, px_range: f64) -> Self::Bytes;
 }
 impl EdgeSelectorDistance for f64 {
+    type Bytes = [u8; 1];
+
     #[inline]
-    fn to_bytes<F: FnOnce(&[u8])>(self, px_range: f64, f: F) {
+    fn to_bytes(self, px_range: f64) -> Self::Bytes {
         let normalized = (self / px_range + 0.5).clamp(0.0, 1.0);
 
-        f(&[(normalized * 255.0).round() as u8]);
+        [(normalized * 255.0).round() as u8]
     }
 }
 impl EdgeSelectorDistance for MultiDistance {
-    fn to_bytes<F: FnOnce(&[u8])>(self, px_range: f64, f: F) {
-        let mut bytes = [0u8; 3];
-        self.r.to_bytes(px_range, |b| bytes[0] = b[0]);
-        self.g.to_bytes(px_range, |b| bytes[1] = b[0]);
-        self.b.to_bytes(px_range, |b| bytes[2] = b[0]);
+    type Bytes = [u8; 3];
 
-        f(&bytes);
+    #[inline]
+    fn to_bytes(self, px_range: f64) -> Self::Bytes {
+        [
+            self.r.to_bytes(px_range)[0],
+            self.g.to_bytes(px_range)[0],
+            self.b.to_bytes(px_range)[0],
+        ]
     }
 }
 

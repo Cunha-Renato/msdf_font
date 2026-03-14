@@ -1,5 +1,6 @@
 use crate::{
-    BitmapData, Bounds, FieldType, GenerationConfig,
+    BitmapData,
+    bounds::Bounds,
     contour::Contour,
     edge::Edge,
     edge_color::EdgeColor,
@@ -37,28 +38,13 @@ impl Shape {
         bounds
     }
 
-    pub(crate) fn generate_bitmap(
-        mut self,
-        config: GenerationConfig,
-        bitmap: &mut impl BitmapData,
-    ) {
-        #[cfg(feature = "fix_geometry")]
-        if config.fix_geometry {
-            self.resolve_shape_geometry();
-        }
-
-        match config.field_type {
-            FieldType::Msdf { max_angle } => {
-                self.coloring_simple(max_angle, 0);
-                self.generate_msdf(config, bitmap);
-            }
-            FieldType::Sdf => self.generate_sdf(config, bitmap),
-        }
-    }
-
-    fn generate_distance_field<E: EdgeSelector>(
+    fn generate_distance_field<
+        E: EdgeSelector<Distance = impl EdgeSelectorDistance<Bytes = P>>,
+        P,
+        B: BitmapData<Pixel = P>,
+    >(
         &self,
-        bitmap: &mut impl BitmapData,
+        bitmap: &mut B,
         px_range: f64,
         offset: DVec2,
     ) {
@@ -68,29 +54,37 @@ impl Shape {
                 let p =
                     DVec2::new(x as f64 + 0.5, bitmap.height() as f64 - (y as f64 + 0.5)) + offset;
 
-                shape_distance_finder
-                    .distance(p)
-                    .to_bytes(px_range, |b| bitmap.set_px(b, x, y));
+                let bytes = shape_distance_finder.distance(p).to_bytes(px_range);
+
+                bitmap.set_px(bytes, x, y);
             }
         }
     }
 
     #[inline]
-    fn generate_sdf(&self, config: GenerationConfig, bitmap: &mut impl BitmapData) {
-        self.generate_distance_field::<TrueDistanceSelector>(bitmap, config.px_range, config.offset)
+    pub(crate) fn generate_sdf(
+        &self,
+        px_range: f64,
+        offset: DVec2,
+        bitmap: &mut impl BitmapData<Pixel = [u8; 1]>,
+    ) {
+        self.generate_distance_field::<TrueDistanceSelector, _, _>(bitmap, px_range, offset)
     }
 
     #[inline]
-    fn generate_msdf(&self, config: GenerationConfig, bitmap: &mut impl BitmapData) {
-        self.generate_distance_field::<MultiDistanceSelector>(
-            bitmap,
-            config.px_range,
-            config.offset,
-        )
+    pub(crate) fn generate_msdf(
+        &mut self,
+        px_range: f64,
+        offset: DVec2,
+        max_angle: f64,
+        bitmap: &mut impl BitmapData<Pixel = [u8; 3]>,
+    ) {
+        self.coloring_simple(max_angle, 0);
+        self.generate_distance_field::<MultiDistanceSelector, _, _>(bitmap, px_range, offset)
     }
 
     #[cfg(feature = "fix_geometry")]
-    fn resolve_shape_geometry(&mut self) {
+    pub(crate) fn resolve_shape_geometry(&mut self) {
         use crate::edge::EdgeType;
         use kurbo::{BezPath, Point};
         use linesweeper::topology::Topology;

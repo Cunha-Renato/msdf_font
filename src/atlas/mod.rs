@@ -2,10 +2,12 @@ mod bitmap;
 mod packer;
 
 use crate::{
-    BitmapImageType, BuildConfig, FieldType, GlyphBitmapData, GlyphBounds, GlyphBuilder, GlyphData,
-    atlas::bitmap::BitmapDataRegion, shape::Shape,
+    Glyph, GlyphBitmapData, GlyphBounds, GlyphBuilder, GlyphData,
+    atlas::{bitmap::BitmapDataRegion, packer::Packer},
 };
-use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
+use rayon::iter::{
+    IndexedParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
+};
 use std::collections::HashMap;
 
 /// Similar to [`crate::GlyphData`] but for the atlas mode.
@@ -15,94 +17,127 @@ pub struct AtlasGlyphData {
     pub atlas_bounds: GlyphBounds<f32>,
     pub data: GlyphData,
 }
-
-pub trait AtlasBuilder {
-    fn build_atlas(self, c: impl IntoIterator<Item = char>) -> Option<Atlas>;
-}
-impl<'a> AtlasBuilder for GlyphBuilder<'a> {
+impl<'a> GlyphBuilder<'a> {
     /// Returns [`None`] if no glyph could be build.
     ///
     /// See [`crate::GlyphBuilder::build`].
     ///
     /// For the packing it uses a simple height based packer.
-    fn build_atlas(self, c: impl IntoIterator<Item = char>) -> Option<Atlas> {
-        struct ShapeConfig {
-            config: BuildConfig,
-            shape: Shape,
+    pub fn build_atlas(self, c: impl IntoIterator<Item = char>) -> Option<Atlas> {
+        struct GlyphChar {
+            glyph: Glyph,
             c: char,
         }
 
-        let mut shape_configs = c
+        let mut glyphs_char = c
             .into_iter()
             .filter_map(|c| {
-                let mut shape = Shape::new(self.scale);
-                let config = self.prepare_for_build(&mut shape, c)?;
+                let glyph = self.build(c)?;
 
-                Some(ShapeConfig { config, shape, c })
+                Some(GlyphChar { glyph, c })
             })
             .collect::<Vec<_>>();
 
-        if shape_configs.is_empty() {
+        if glyphs_char.is_empty() {
             return None;
         }
 
-        let packer = packer::Packer::pack(&mut shape_configs, |sc| sc.config.bitmap_size);
+        let packer = Packer::pack(&mut glyphs_char, |g| g.glyph.build_config.bitmap_size);
+        let mut glyphs = Vec::with_capacity(glyphs_char.len());
 
-        let image_type = match &self.generation_config.field_type {
-            FieldType::Msdf { .. } => BitmapImageType::Rgb8,
-            FieldType::Sdf => BitmapImageType::L8,
-        };
-        let mut bitmap = GlyphBitmapData::new(packer.width, packer.height, image_type);
-        let bitmap_ptr = &mut bitmap as *mut GlyphBitmapData as usize;
-
-        let glyph_table = shape_configs
-            .into_par_iter()
-            .zip(packer.rects)
-            .map(|(sc, packer)| {
-                // This is fine, we don't have overlapping pixels.
-                let bitmap_ref = unsafe { &mut *(bitmap_ptr as *mut GlyphBitmapData) };
-                let shape = sc.shape;
-                let config = sc.config;
-
-                let mut bitmap_region = BitmapDataRegion {
-                    data: bitmap_ref,
-                    x: packer.x,
-                    y: packer.y,
-                    width: config.bitmap_size.0,
-                    height: config.bitmap_size.1,
-                };
-
-                shape.generate_bitmap(config.generation_config, &mut bitmap_region);
-
+        let glyph_table = glyphs_char
+            .into_iter()
+            .zip(&packer.rects)
+            .map(|(gc, packer)| {
                 let min = [packer.x as f32, packer.y as f32];
                 let max = [
-                    min[0] + bitmap_region.width as f32,
-                    min[1] + bitmap_region.height as f32,
+                    min[0] + gc.glyph.build_config.bitmap_size[0] as f32,
+                    min[1] + gc.glyph.build_config.bitmap_size[1] as f32,
                 ];
 
                 let atlas_bounds = GlyphBounds { min, max };
+                let data = gc.glyph.data;
 
-                (
-                    sc.c,
-                    AtlasGlyphData {
-                        atlas_bounds,
-                        data: config.glyph_data,
-                    },
-                )
+                glyphs.push(gc.glyph);
+
+                (gc.c, AtlasGlyphData { atlas_bounds, data })
             })
             .collect();
 
         Some(Atlas {
-            bitmap,
             glyph_table,
+            glyphs,
+            packer,
         })
     }
 }
 
 /// Represents the glyph atlas.
 pub struct Atlas {
-    /// Bitmap of the entire atlas.
-    pub bitmap: GlyphBitmapData,
     /// Table of data for glyphs.
     pub glyph_table: HashMap<char, AtlasGlyphData>,
+    glyphs: Vec<Glyph>,
+    packer: Packer,
+}
+impl Atlas {
+    pub fn sdf(&self) -> GlyphBitmapData<1> {
+        let bitmap_size = [self.packer.width, self.packer.height];
+        let mut bitmap = GlyphBitmapData::new(bitmap_size[0], bitmap_size[1]);
+
+        let bitmap_ptr = &mut bitmap as *mut GlyphBitmapData<1> as usize;
+
+        self.glyphs
+            .par_iter()
+            .zip(&self.packer.rects)
+            .for_each(|(g, rect)| {
+                let bitmap_ref = unsafe { &mut *(bitmap_ptr as *mut GlyphBitmapData<1>) };
+
+                let mut bitmap_region = BitmapDataRegion {
+                    data: bitmap_ref,
+                    x: rect.x,
+                    y: rect.y,
+                    width: g.build_config.bitmap_size[0],
+                    height: g.build_config.bitmap_size[1],
+                };
+
+                g.shape.generate_sdf(
+                    g.build_config.px_range,
+                    g.build_config.offset,
+                    &mut bitmap_region,
+                );
+            });
+
+        bitmap
+    }
+
+    pub fn msdf(&mut self, max_angle: f64) -> GlyphBitmapData<3> {
+        let bitmap_size = [self.packer.width, self.packer.height];
+        let mut bitmap = GlyphBitmapData::new(bitmap_size[0], bitmap_size[1]);
+
+        let bitmap_ptr = &mut bitmap as *mut GlyphBitmapData<3> as usize;
+
+        self.glyphs
+            .par_iter_mut()
+            .zip(&self.packer.rects)
+            .for_each(|(g, rect)| {
+                let bitmap_ref = unsafe { &mut *(bitmap_ptr as *mut GlyphBitmapData<3>) };
+
+                let mut bitmap_region = BitmapDataRegion {
+                    data: bitmap_ref,
+                    x: rect.x,
+                    y: rect.y,
+                    width: g.build_config.bitmap_size[0],
+                    height: g.build_config.bitmap_size[1],
+                };
+
+                g.shape.generate_msdf(
+                    g.build_config.px_range,
+                    g.build_config.offset,
+                    max_angle,
+                    &mut bitmap_region,
+                );
+            });
+
+        bitmap
+    }
 }

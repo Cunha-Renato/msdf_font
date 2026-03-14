@@ -1,8 +1,10 @@
-#[cfg(feature = "atlas")]
-use msdf_font::{Atlas, AtlasBuilder};
-use msdf_font::{FieldType, GlyphBounds, GlyphBuilder};
 #[cfg(not(feature = "atlas"))]
-use msdf_font::{Glyph, GlyphBitmapData};
+use msdf_font::GlyphData;
+#[cfg(feature = "atlas")]
+use msdf_font::{Atlas, AtlasGlyphData};
+use msdf_font::{GlyphBitmapData, GlyphBounds, GlyphBuilder};
+#[cfg(feature = "atlas")]
+use std::collections::HashMap;
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
 use winit::{
@@ -98,21 +100,20 @@ impl WgpuState {
         };
 
         let msdf_texture_size = wgpu::Extent3d {
-            width: font.msdf.bitmap.width as u32,
-            height: font.msdf.bitmap.height as u32,
+            width: font.msdf.width as u32,
+            height: font.msdf.height as u32,
             depth_or_array_layers: 1,
         };
         let msdf_texture_bytes = font
             .msdf
-            .bitmap
-            .bytes
+            .bytes()
             .chunks_exact(3)
             .flat_map(|px| [px[0], px[1], px[2], 255])
             .collect::<Vec<_>>();
 
         let sdf_texture_size = wgpu::Extent3d {
-            width: font.sdf.bitmap.width as u32,
-            height: font.sdf.bitmap.height as u32,
+            width: font.sdf.width as u32,
+            height: font.sdf.height as u32,
             depth_or_array_layers: 1,
         };
 
@@ -161,7 +162,7 @@ impl WgpuState {
                 origin: wgpu::Origin3d::ZERO,
                 aspect: wgpu::TextureAspect::All,
             },
-            &font.sdf.bitmap.bytes,
+            &font.sdf.bytes(),
             wgpu::TexelCopyBufferLayout {
                 offset: 0,
                 bytes_per_row: Some(sdf_texture_size.width),
@@ -308,13 +309,11 @@ impl WgpuState {
 
 struct Font {
     #[cfg(not(feature = "atlas"))]
-    msdf: Glyph<GlyphBitmapData>,
-    #[cfg(not(feature = "atlas"))]
-    sdf: Glyph<GlyphBitmapData>,
+    data: GlyphData,
     #[cfg(feature = "atlas")]
-    msdf: Atlas,
-    #[cfg(feature = "atlas")]
-    sdf: Atlas,
+    data: HashMap<char, AtlasGlyphData>,
+    msdf: GlyphBitmapData<3>,
+    sdf: GlyphBitmapData<1>,
     #[cfg(feature = "atlas")]
     line_space: f32,
 
@@ -326,39 +325,37 @@ impl Font {
             ttf_parser::Face::parse(include_bytes!("assets/OpenSans-Medium.ttf"), 0).unwrap();
 
         let units_per_em = face.units_per_em() as f32;
-        #[cfg(feature = "atals")]
+        #[cfg(feature = "atlas")]
         let line_space = face.ascender() - face.descender() + face.line_gap();
 
-        let sdf_builder = GlyphBuilder::new(&face).px_range(4).px_size(50);
+        let builder = GlyphBuilder::new(&face).px_range(4).px_size(50);
 
         #[cfg(feature = "fix_geometry")]
-        let sdf_builder = sdf_builder.fix_geometry(true);
-
-        let msdf_builder = sdf_builder.field_type(FieldType::Msdf { max_angle: 3.0 });
+        let builder = builder.fix_geometry(true);
 
         #[cfg(not(feature = "atlas"))]
-        let (sdf, msdf) = {
-            (
-                sdf_builder.build('ç').unwrap(),
-                msdf_builder.build('ç').unwrap(),
-            )
-        };
+        let mut glyph = builder.build('ç').unwrap();
+
+        #[cfg(not(feature = "atlas"))]
+        let (sdf, msdf) = { (glyph.sdf(), glyph.msdf(3.0)) };
 
         #[cfg(feature = "atlas")]
-        let (sdf, msdf) = {
+        let (sdf, msdf, atlas) = {
             let chars = (0..0xff).filter_map(char::from_u32);
+            let mut atlas = builder.build_atlas(chars).unwrap();
 
-            (
-                sdf_builder.build_atlas(chars.clone()).unwrap(),
-                msdf_builder.build_atlas(chars).unwrap(),
-            )
+            (atlas.sdf(), atlas.msdf(3.0), atlas)
         };
 
         Self {
+            #[cfg(not(feature = "atlas"))]
+            data: glyph.data,
+            #[cfg(feature = "atlas")]
+            data: atlas.glyph_table,
             msdf,
             sdf,
             units_per_em,
-            #[cfg(feature = "atals")]
+            #[cfg(feature = "atlas")]
             line_space: line_space as f32,
         }
     }
@@ -504,8 +501,8 @@ impl AppCore {
 
         #[cfg(not(feature = "atlas"))]
         return {
-            let plane_bounds = self.font.msdf.glyph_data.plane_bounds;
-            let bearing = self.font.msdf.glyph_data.bearing;
+            let plane_bounds = self.font.data.plane_bounds;
+            let bearing = self.font.data.bearing;
             let bearing = [bearing[0] as f32 * scale, bearing[1] as f32 * scale];
 
             let cursor = [0.0; 2];
@@ -534,16 +531,13 @@ impl AppCore {
 
         #[cfg(feature = "atlas")]
         return {
-            let atlas_size = [
-                self.font.msdf.bitmap.width as f32,
-                self.font.msdf.bitmap.height as f32,
-            ];
+            let atlas_size = [self.font.msdf.width as f32, self.font.msdf.height as f32];
             let mut cursor = [0.0, self.text_size];
 
             (0..0xff)
                 .filter_map(char::from_u32)
                 .filter_map(|c| {
-                    self.font.msdf.glyph_table.get(&c).map(|g_data| {
+                    self.font.data.get(&c).map(|g_data| {
                         let plane_bounds = g_data.data.plane_bounds;
                         let size = plane_bounds.size();
                         let size = [size[0] * scale, size[1] * scale];

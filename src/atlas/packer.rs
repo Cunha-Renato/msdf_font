@@ -13,7 +13,7 @@ impl Packer {
     // Padding in px for x and y;
     const PADDING: usize = 1;
 
-    pub(super) fn pack<T>(data: &mut [T], size_fn: impl Fn(&T) -> (usize, usize)) -> Self {
+    pub(super) fn pack<T>(data: &mut [T], size_fn: impl Fn(&T) -> [usize; 2]) -> Self {
         let mut total_area = 0;
 
         // Sort by height.
@@ -21,7 +21,7 @@ impl Packer {
             let size_a = size_fn(a);
             let size_b = size_fn(b);
 
-            size_b.1.cmp(&size_a.1)
+            size_b[1].cmp(&size_a[1])
         });
 
         // Indexing the rects.
@@ -29,16 +29,16 @@ impl Packer {
             .iter()
             .map(|data| {
                 let size = size_fn(data);
-                total_area += (size.0 + Self::PADDING) * (size.1 + Self::PADDING);
+                total_area += (size[0] + Self::PADDING) * (size[1] + Self::PADDING);
 
-                (size.0, size.1)
+                size
             })
             .collect::<Vec<_>>();
 
         let width = if data.len() > 1 {
             (total_area as f64).sqrt().ceil() as usize
         } else {
-            size_fn(&data[0]).0
+            size_fn(&data[0])[0]
         };
 
         let mut x_cursor = 0;
@@ -46,7 +46,10 @@ impl Packer {
         let mut next_y_pos = 0;
         let packed_rects = rects_indexed
             .into_iter()
-            .map(|(w, h)| {
+            .map(|size| {
+                let w = size[0];
+                let h = size[1];
+
                 if x_cursor + w > width {
                     x_cursor = 0;
                     y_cursor = next_y_pos;

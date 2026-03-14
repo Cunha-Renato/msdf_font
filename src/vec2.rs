@@ -1,4 +1,4 @@
-use crate::Bounds;
+use crate::bounds::Bounds;
 use glam::DVec2;
 
 pub(crate) trait Vec2Ext {

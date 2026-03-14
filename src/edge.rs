@@ -1,5 +1,6 @@
 use crate::{
-    Bounds, distance::SignedDistance, edge_color::EdgeColor, solvers::solve_cubic, vec2::Vec2Ext,
+    bounds::Bounds, distance::SignedDistance, edge_color::EdgeColor, solvers::solve_cubic,
+    vec2::Vec2Ext,
 };
 use glam::DVec2;
 

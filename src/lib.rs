@@ -1,4 +1,5 @@
 mod bitmap;
+mod bounds;
 mod contour;
 mod distance;
 mod edge;
@@ -8,13 +9,11 @@ mod glyph;
 mod shape;
 mod shape_distance_finder;
 mod solvers;
-mod types;
 mod vec2;
 
 pub use bitmap::*;
 pub use glyph::*;
 pub use ttf_parser;
-pub use types::*;
 
 #[cfg(feature = "atlas")]
 mod atlas;

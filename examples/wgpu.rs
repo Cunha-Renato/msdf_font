@@ -1,7 +1,7 @@
 #[cfg(not(feature = "atlas"))]
 use msdf_font::GlyphData;
 #[cfg(feature = "atlas")]
-use msdf_font::{Atlas, AtlasGlyphData};
+use msdf_font::AtlasGlyphData;
 use msdf_font::{GlyphBitmapData, GlyphBounds, GlyphBuilder};
 #[cfg(feature = "atlas")]
 use std::collections::HashMap;
@@ -11,7 +11,7 @@ use winit::{
     application::ApplicationHandler,
     event::WindowEvent,
     keyboard::{KeyCode, PhysicalKey},
-    window::Window,
+    window::{Window, WindowAttributes},
 };
 
 #[repr(C)]
@@ -315,7 +315,11 @@ struct Font {
     msdf: GlyphBitmapData<u8, 3>,
     sdf: GlyphBitmapData<u8, 1>,
     #[cfg(feature = "atlas")]
+    space_advance: [f32; 2],
+    #[cfg(feature = "atlas")]
     line_space: f32,
+    #[cfg(feature = "atlas")]
+    ascender: f32,
 
     units_per_em: f32,
 }
@@ -327,8 +331,13 @@ impl Font {
         let units_per_em = face.units_per_em() as f32;
         #[cfg(feature = "atlas")]
         let line_space = face.ascender() - face.descender() + face.line_gap();
+        #[cfg(feature = "atlas")]
+        let ascender = face.ascender() as f32;
 
-        let builder = GlyphBuilder::new(&face).px_range(4).px_size(40);
+        let builder = GlyphBuilder::new(&face)
+            .px_range(4)
+            .px_size(40)
+            .error_correction(true);
 
         #[cfg(feature = "fix_geometry")]
         let builder = builder.fix_geometry(true);
@@ -347,6 +356,16 @@ impl Font {
             (atlas.sdf(), atlas.msdf(3.0), atlas)
         };
 
+        #[cfg(feature = "atlas")]
+        let space_advance = if let Some(gid) = face.glyph_index(' ') {
+            [
+                face.glyph_hor_advance(gid).unwrap_or(0) as f32,
+                face.glyph_ver_advance(gid).unwrap_or(0) as f32,
+            ]
+        } else {
+            [0.0; 2]
+        };
+
         Self {
             #[cfg(not(feature = "atlas"))]
             data: glyph.data,
@@ -357,6 +376,10 @@ impl Font {
             units_per_em,
             #[cfg(feature = "atlas")]
             line_space: line_space as f32,
+            #[cfg(feature = "atlas")]
+            ascender,
+            #[cfg(feature = "atlas")]
+            space_advance,
         }
     }
 }
@@ -532,62 +555,72 @@ impl AppCore {
         #[cfg(feature = "atlas")]
         return {
             let atlas_size = [self.font.msdf.width as f32, self.font.msdf.height as f32];
-            let mut cursor = [0.0, self.text_size];
+            let mut cursor = [0.0, self.font.ascender * scale];
+            let new_line = self.font.line_space * scale;
 
-            (0..0xff)
-                .filter_map(char::from_u32)
+            include_str!("assets/lorem_ipsum.txt")
+                .chars()
                 .filter_map(|c| {
-                    self.font.data.get(&c).map(|g_data| {
-                        let plane_bounds = g_data.data.plane_bounds;
-                        let size = plane_bounds.size();
-                        let size = [size[0] * scale, size[1] * scale];
+                    if c == ' ' {
+                        cursor[0] += self.font.space_advance[0] * scale;
+                        None
+                    } else if c == '\n' {
+                        cursor[0] = 0.0;
+                        cursor[1] += new_line;
+                        None
+                    } else {
+                        self.font.data.get(&c).map(|g_data| {
+                            let plane_bounds = g_data.data.plane_bounds;
+                            let size = plane_bounds.size();
+                            let size = [size[0] * scale, size[1] * scale];
 
-                        if size[0] + cursor[0] > window_size[0] / 2.0 {
-                            cursor[0] = 0.0;
-                            cursor[1] += self.font.line_space * scale;
-                        }
+                            if size[0] + cursor[0] > window_size[0] / 2.0 {
+                                cursor[0] = 0.0;
+                                cursor[1] += new_line;
+                            }
 
-                        let bearing = g_data.data.bearing;
-                        let bearing = [bearing[0] as f32 * scale, bearing[1] as f32 * scale];
+                            let bearing = g_data.data.bearing;
+                            let bearing = [bearing[0] as f32 * scale, bearing[1] as f32 * scale];
 
-                        let mut uv_offset = [0.0; 2];
-                        let mut uv_size = [0.0; 2];
+                            let mut uv_offset = [0.0; 2];
+                            let mut uv_size = [0.0; 2];
 
-                        for i in 0..2 {
-                            uv_offset[i] = g_data.atlas_bounds.min[i] as f32 / atlas_size[i];
+                            for i in 0..2 {
+                                uv_offset[i] = g_data.atlas_bounds.min[i] as f32 / atlas_size[i];
 
-                            uv_size[i] =
-                                g_data.atlas_bounds.max[i] as f32 / atlas_size[i] - uv_offset[i];
-                        }
+                                uv_size[i] = g_data.atlas_bounds.max[i] as f32 / atlas_size[i]
+                                    - uv_offset[i];
+                            }
 
-                        let result = [
-                            self.get_draw_glyph_data(
-                                1,
-                                scale,
-                                plane_bounds,
-                                window_size,
-                                [cursor[0] + bearing[0], cursor[1] - bearing[1]],
-                                uv_offset,
-                                uv_size,
-                            ),
-                            self.get_draw_glyph_data(
-                                0,
-                                scale,
-                                plane_bounds,
-                                window_size,
-                                [
-                                    window_size[0] / 2.0 + cursor[0] + bearing[0],
-                                    cursor[1] - bearing[1],
-                                ],
-                                uv_offset,
-                                uv_size,
-                            ),
-                        ];
+                            let result = [
+                                self.get_draw_glyph_data(
+                                    1,
+                                    scale,
+                                    plane_bounds,
+                                    window_size,
+                                    [cursor[0] + bearing[0], cursor[1] - bearing[1]],
+                                    uv_offset,
+                                    uv_size,
+                                ),
+                                self.get_draw_glyph_data(
+                                    0,
+                                    scale,
+                                    plane_bounds,
+                                    window_size,
+                                    [
+                                        window_size[0] / 2.0 + cursor[0] + bearing[0],
+                                        cursor[1] - bearing[1],
+                                    ],
+                                    uv_offset,
+                                    uv_size,
+                                ),
+                            ];
 
-                        cursor[0] += g_data.data.advance[0] as f32 * scale;
+                            cursor[0] += g_data.data.advance[0] as f32 * scale;
 
-                        result
-                    })
+                            result
+                        })
+                    }
                 })
                 .flatten()
                 .collect()
@@ -665,7 +698,9 @@ struct App {
 impl ApplicationHandler for App {
     fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
         self.core = Some(pollster::block_on(AppCore::new(
-            event_loop.create_window(Default::default()).unwrap(),
+            event_loop
+                .create_window(WindowAttributes::default().with_title("WGPU msdf_font Example"))
+                .unwrap(),
         )))
     }
 

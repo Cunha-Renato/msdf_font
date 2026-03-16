@@ -1,1 +1,1 @@
-Apache-2.0 OR MIT (5): glam, kurbo, linesweeper, rayon, ttf-parser
+Apache-2.0 OR MIT (6): glam, kurbo, linesweeper, msdf_font, rayon, ttf-parser

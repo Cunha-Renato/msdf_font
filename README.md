@@ -20,7 +20,7 @@ Most of it is translated from the original C++ [msdfgen](https://github.com/Chlu
 * ✅ SDF
 * ✅ Atlas generation (feature `atlas`)
 * ✅ Shape correction (feature `fix_geometry`)
-* ❌ Error correction
+* ✅ Error correction (simple)
 * ❌ Other types of distance fields
 
 Here we can have a look at a glyph rendered without the `fix_geometry` feature.
@@ -56,6 +56,7 @@ fn main() {
         .px_size(40)
         .build('A')
         // .build_atlas(['A', 'B', 'C', 'D']) If using atlas feature.
+        .error_correction(true)
         .unwrap();
 
     let msdf = glyph.msdf(3.0);
@@ -70,4 +71,4 @@ fn main() {
 }
 ```
 
-You can also see the examples, that use [OpenSans](https://fonts.google.com/specimen/Open+Sans), to check the other features.
+You can also see the examples([OpenSans](https://fonts.google.com/specimen/Open+Sans)) to check the other features.

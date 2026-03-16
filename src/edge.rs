@@ -1,3 +1,5 @@
+//! Code taken from https://github.com/Chlumsky/msdfgen/blob/master/core/edge-segments.cpp.
+
 use crate::{
     bounds::Bounds, distance::SignedDistance, edge_color::EdgeColor, solvers::solve_cubic,
     vec2::Vec2Ext,

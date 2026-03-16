@@ -1,3 +1,5 @@
+//! Code taken from https://github.com/Chlumsky/msdfgen.
+
 use core::f64;
 
 pub(crate) fn solve_quadratic(x: &mut [f64], a: f64, b: f64, c: f64) -> usize {

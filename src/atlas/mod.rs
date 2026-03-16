@@ -79,7 +79,7 @@ pub struct Atlas {
 }
 impl Atlas {
     #[inline]
-    pub fn builder<'a>(face: &'a Face) -> GlyphBuilder<'a> {
+    pub fn builder<'a>(face: &'a ttf_parser::Face) -> GlyphBuilder<'a> {
         GlyphBuilder::new(face)
     }
 

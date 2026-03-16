@@ -1,3 +1,5 @@
+//! Some parts were taken from https://github.com/Chlumsky/msdfgen and others from https://gitlab.com/Kyarei/fdsm.
+//!
 use crate::{
     BitmapData, GlyphBitmapData,
     bounds::Bounds,

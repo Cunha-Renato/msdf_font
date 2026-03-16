@@ -1,3 +1,5 @@
+//! Code taken from https://github.com/Chlumsky/msdfgen/blob/master/core/edge-selectors.cpp.
+
 use crate::{
     distance::{MultiDistance, SignedDistance},
     edge::Edge,

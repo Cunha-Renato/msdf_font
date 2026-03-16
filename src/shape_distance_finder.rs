@@ -1,3 +1,5 @@
+//! Code taken from https://github.com/Chlumsky/msdfgen/blob/master/core/ShapeDistanceFinder.hpp.
+
 use crate::{edge_selector::EdgeSelector, shape::Shape};
 use glam::DVec2;
 

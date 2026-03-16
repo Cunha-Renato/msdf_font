@@ -1,5 +1,6 @@
 //! Courtesy of fdsm.
 //! See https://gitlab.com/Kyarei/fdsm/-/blob/main/fdsm/src/color.rs
+
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not};
 
 // The number of channels used.

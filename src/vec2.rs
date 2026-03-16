@@ -1,3 +1,5 @@
+//! Code taken from https://github.com/Chlumsky/msdfgen.
+
 use crate::bounds::Bounds;
 use glam::DVec2;
 

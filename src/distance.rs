@@ -1,3 +1,5 @@
+//! Code taken from https://github.com/Chlumsky/msdfgen.
+
 use std::cmp::Ordering;
 
 #[derive(Debug, Clone, Copy, PartialEq)]

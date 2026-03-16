@@ -29,6 +29,7 @@ impl<T: Copy + std::ops::Sub<Output = T>> GlyphBounds<T> {
     }
 }
 
+/// Builder for [`crate::Glyph`] or [`crate::Atlas`].
 #[derive(Debug, Clone, Copy)]
 pub struct GlyphBuilder<'a> {
     face: &'a Face<'a>,
@@ -37,12 +38,15 @@ pub struct GlyphBuilder<'a> {
     fix_geometry: bool,
 }
 impl<'a> GlyphBuilder<'a> {
+    const DEFAULT_PX_RANGE: f64 = 2.0;
+    const DEFAULT_PX_SIZE: f64 = 40.0;
+
     pub fn new(face: &'a Face) -> Self {
         Self {
             face,
             build_config: BuildConfig {
-                px_range: 2.0,
-                scale: scale_value(40.0, face),
+                px_range: Self::DEFAULT_PX_RANGE,
+                scale: scale_value(Self::DEFAULT_PX_SIZE, face),
                 ..Default::default()
             },
             #[cfg(feature = "fix_geometry")]
@@ -50,6 +54,8 @@ impl<'a> GlyphBuilder<'a> {
         }
     }
 
+    /// Controls how big the bitmap will be.
+    ///
     /// Default is 40.
     #[inline]
     pub fn px_size(mut self, px_size: u32) -> Self {
@@ -64,20 +70,14 @@ impl<'a> GlyphBuilder<'a> {
         self
     }
 
-    /// Default is [`false`].
-    ///
+    /// Fixes overlapping contours, and other geometry issues.
     /// This is super expensive to compute.
+    ///
+    /// Default is [`false`].
     #[cfg(feature = "fix_geometry")]
     #[inline]
     pub const fn fix_geometry(mut self, fix_geometry: bool) -> Self {
         self.fix_geometry = fix_geometry;
-        self
-    }
-
-    /// Default is [`false`]
-    #[inline]
-    pub const fn error_correction(mut self, error_correction: bool) -> Self {
-        self.build_config.error_correction = error_correction;
         self
     }
 
@@ -165,6 +165,14 @@ pub struct Glyph {
     pub(crate) shape: Shape,
 }
 impl Glyph {
+    #[inline]
+    pub fn builder<'a>(face: &'a Face) -> GlyphBuilder<'a> {
+        GlyphBuilder::new(face)
+    }
+
+    /// Generates sdf bitmap with the [`crate::GlyphBuilder`] configuration.
+    ///
+    /// The bitmap has only one channel (L8).
     pub fn sdf(&self) -> GlyphBitmapData<u8, 1> {
         let bitmap_size = self.build_config.bitmap_size;
         let mut bitmap = GlyphBitmapData::new(bitmap_size[0], bitmap_size[1]);
@@ -178,7 +186,10 @@ impl Glyph {
         bitmap
     }
 
-    pub fn msdf(&mut self, max_angle: f64) -> GlyphBitmapData<u8, 3> {
+    /// Generates msdf bitmap with the [`crate::GlyphBuilder`] configuration.
+    ///
+    /// The bitmap has 3 channels (Rgb8).
+    pub fn msdf(&mut self, max_angle: f64, error_correction: bool) -> GlyphBitmapData<u8, 3> {
         let bitmap_size = self.build_config.bitmap_size;
         let mut bitmap = GlyphBitmapData::new(bitmap_size[0], bitmap_size[1]);
 
@@ -186,7 +197,7 @@ impl Glyph {
             self.build_config.px_range,
             self.build_config.offset,
             max_angle,
-            self.build_config.error_correction,
+            error_correction,
             &mut bitmap,
         );
 
@@ -200,7 +211,6 @@ pub(crate) struct BuildConfig {
     pub(crate) offset: DVec2,
     pub(crate) px_range: f64,
     pub(crate) scale: f64,
-    pub(crate) error_correction: bool,
 }
 
 #[inline]

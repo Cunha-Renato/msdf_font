@@ -78,6 +78,14 @@ pub struct Atlas {
     packer: Packer,
 }
 impl Atlas {
+    #[inline]
+    pub fn builder<'a>(face: &'a Face) -> GlyphBuilder<'a> {
+        GlyphBuilder::new(face)
+    }
+
+    /// Generates sdf atlas bitmap with the [`crate::GlyphBuilder`] configuration.
+    ///
+    /// The bitmap has only one channel (L8).
     pub fn sdf(&mut self) -> GlyphBitmapData<u8, 1> {
         self.gen_field(|g, region| {
             g.shape
@@ -85,13 +93,16 @@ impl Atlas {
         })
     }
 
-    pub fn msdf(&mut self, max_angle: f64) -> GlyphBitmapData<u8, 3> {
+    /// Generates msdf atlas bitmap with the [`crate::GlyphBuilder`] configuration.
+    ///
+    /// The bitmap has 3 channels (Rgb8).
+    pub fn msdf(&mut self, max_angle: f64, error_correction: bool) -> GlyphBitmapData<u8, 3> {
         self.gen_field(|g, region| {
             g.shape.generate_msdf(
                 g.build_config.px_range,
                 g.build_config.offset,
                 max_angle,
-                g.build_config.error_correction,
+                error_correction,
                 region,
             )
         })

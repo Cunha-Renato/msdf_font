@@ -1,7 +1,7 @@
-#[cfg(not(feature = "atlas"))]
-use msdf_font::GlyphData;
 #[cfg(feature = "atlas")]
 use msdf_font::AtlasGlyphData;
+#[cfg(not(feature = "atlas"))]
+use msdf_font::GlyphData;
 use msdf_font::{GlyphBitmapData, GlyphBounds, GlyphBuilder};
 #[cfg(feature = "atlas")]
 use std::collections::HashMap;
@@ -334,10 +334,7 @@ impl Font {
         #[cfg(feature = "atlas")]
         let ascender = face.ascender() as f32;
 
-        let builder = GlyphBuilder::new(&face)
-            .px_range(4)
-            .px_size(40)
-            .error_correction(true);
+        let builder = GlyphBuilder::new(&face).px_range(4).px_size(40);
 
         #[cfg(feature = "fix_geometry")]
         let builder = builder.fix_geometry(true);
@@ -346,14 +343,14 @@ impl Font {
         let mut glyph = builder.build('ç').unwrap();
 
         #[cfg(not(feature = "atlas"))]
-        let (sdf, msdf) = { (glyph.sdf(), glyph.msdf(3.0)) };
+        let (sdf, msdf) = { (glyph.sdf(), glyph.msdf(3.0, false)) };
 
         #[cfg(feature = "atlas")]
         let (sdf, msdf, atlas) = {
             let chars = (0..0xff).filter_map(char::from_u32);
             let mut atlas = builder.build_atlas(chars).unwrap();
 
-            (atlas.sdf(), atlas.msdf(3.0), atlas)
+            (atlas.sdf(), atlas.msdf(3.0, false), atlas)
         };
 
         #[cfg(feature = "atlas")]

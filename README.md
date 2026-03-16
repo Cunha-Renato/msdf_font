@@ -56,10 +56,9 @@ fn main() {
         .px_size(40)
         .build('A')
         // .build_atlas(['A', 'B', 'C', 'D']) If using atlas feature.
-        .error_correction(true)
         .unwrap();
 
-    let msdf = glyph.msdf(3.0);
+    let msdf = glyph.msdf(3.0, true);
 
     image::save_buffer(
         "image.png",

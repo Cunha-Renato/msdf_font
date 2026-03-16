@@ -312,8 +312,8 @@ struct Font {
     data: GlyphData,
     #[cfg(feature = "atlas")]
     data: HashMap<char, AtlasGlyphData>,
-    msdf: GlyphBitmapData<3>,
-    sdf: GlyphBitmapData<1>,
+    msdf: GlyphBitmapData<u8, 3>,
+    sdf: GlyphBitmapData<u8, 1>,
     #[cfg(feature = "atlas")]
     line_space: f32,
 
@@ -328,7 +328,7 @@ impl Font {
         #[cfg(feature = "atlas")]
         let line_space = face.ascender() - face.descender() + face.line_gap();
 
-        let builder = GlyphBuilder::new(&face).px_range(4).px_size(50);
+        let builder = GlyphBuilder::new(&face).px_range(4).px_size(40);
 
         #[cfg(feature = "fix_geometry")]
         let builder = builder.fix_geometry(true);

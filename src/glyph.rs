@@ -74,6 +74,13 @@ impl<'a> GlyphBuilder<'a> {
         self
     }
 
+    /// Default is [`false`]
+    #[inline]
+    pub const fn error_correction(mut self, error_correction: bool) -> Self {
+        self.build_config.error_correction = error_correction;
+        self
+    }
+
     pub fn build(mut self, c: char) -> Option<Glyph> {
         let mut shape = Shape::new(self.build_config.scale);
         let glyph_id = self.face.glyph_index(c)?;
@@ -179,6 +186,7 @@ impl Glyph {
             self.build_config.px_range,
             self.build_config.offset,
             max_angle,
+            self.build_config.error_correction,
             &mut bitmap,
         );
 
@@ -188,10 +196,11 @@ impl Glyph {
 
 #[derive(Debug, Default, Clone, Copy)]
 pub(crate) struct BuildConfig {
+    pub(crate) bitmap_size: [usize; 2],
     pub(crate) offset: DVec2,
     pub(crate) px_range: f64,
     pub(crate) scale: f64,
-    pub(crate) bitmap_size: [usize; 2],
+    pub(crate) error_correction: bool,
 }
 
 #[inline]

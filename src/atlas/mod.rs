@@ -91,6 +91,7 @@ impl Atlas {
                 g.build_config.px_range,
                 g.build_config.offset,
                 max_angle,
+                g.build_config.error_correction,
                 region,
             )
         })
@@ -99,17 +100,17 @@ impl Atlas {
     fn gen_field<const N: usize>(
         &mut self,
         f: impl Fn(&mut Glyph, &mut BitmapDataRegion<N>) + Sync,
-    ) -> GlyphBitmapData<N> {
+    ) -> GlyphBitmapData<u8, N> {
         let bitmap_size = [self.packer.width, self.packer.height];
         let mut bitmap = GlyphBitmapData::new(bitmap_size[0], bitmap_size[1]);
 
-        let bitmap_ptr = &mut bitmap as *mut GlyphBitmapData<N> as usize;
+        let bitmap_ptr = &mut bitmap as *mut GlyphBitmapData<u8, N> as usize;
 
         self.glyphs
             .par_iter_mut()
             .zip(&self.packer.rects)
             .for_each(|(g, rect)| {
-                let bitmap_ref = unsafe { &mut *(bitmap_ptr as *mut GlyphBitmapData<N>) };
+                let bitmap_ref = unsafe { &mut *(bitmap_ptr as *mut GlyphBitmapData<u8, N>) };
 
                 let mut bitmap_region = BitmapDataRegion {
                     data: bitmap_ref,

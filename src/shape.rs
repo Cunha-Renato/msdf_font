@@ -7,6 +7,7 @@ use crate::{
     edge_selector::{
         EdgeSelector, EdgeSelectorDistance, MultiDistanceSelector, TrueDistanceSelector,
     },
+    error_correction::correct_error_msdf,
     shape_distance_finder::ShapeDistanceFinder,
 };
 use core::f64;
@@ -102,18 +103,32 @@ impl Shape {
         px_range: f64,
         offset: DVec2,
         max_angle: f64,
+        error_correction: bool,
         bitmap: &mut impl BitmapData<Pixel = [u8; 3]>,
     ) {
+        self.coloring_simple(max_angle, 0);
+
+        if !error_correction {
+            self.generate_distance_field::<MultiDistanceSelector, _, _>(bitmap, px_range, offset);
+            return;
+        }
+
         let mut normalized_bitmap = GlyphBitmapData::<f64, 3>::new(bitmap.width(), bitmap.height());
 
-        self.coloring_simple(max_angle, 0);
         self.generate_normalized_distance_field::<MultiDistanceSelector, _, _>(
             &mut normalized_bitmap,
             px_range,
             offset,
         );
-        //TODO: Error Correction.
-        //TODO: Copy to u8 bitmap.
+        correct_error_msdf(&mut normalized_bitmap, self, px_range, &Default::default());
+
+        for y in 0..bitmap.height() {
+            for x in 0..bitmap.width() {
+                let p = normalized_bitmap.get_px(x, y).map(|p| p.to_bytes()[0]);
+
+                bitmap.set_px(p, x, y);
+            }
+        }
     }
 
     #[cfg(feature = "fix_geometry")]

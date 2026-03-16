@@ -13,7 +13,6 @@ pub(crate) trait EdgeSelectorDistance {
     fn normalize(self, px_range: f64) -> Self::Normalized;
     fn normalize_to_bytes(self, px_range: f64) -> Self::Bytes;
     fn to_bytes(self) -> Self::Bytes;
-    fn from_bytes(bytes: Self::Bytes, px_range: f64) -> Self;
 }
 impl EdgeSelectorDistance for f64 {
     type Normalized = Self;
@@ -32,12 +31,6 @@ impl EdgeSelectorDistance for f64 {
     #[inline]
     fn to_bytes(self) -> Self::Bytes {
         [(self * 255.0).round() as u8]
-    }
-
-    fn from_bytes(bytes: Self::Bytes, px_range: f64) -> Self {
-        let normalized = bytes[0] as f64 / 255.0;
-
-        (normalized - 0.5) * px_range
     }
 }
 impl EdgeSelectorDistance for MultiDistance {
@@ -69,14 +62,6 @@ impl EdgeSelectorDistance for MultiDistance {
             self.g.to_bytes()[0],
             self.b.to_bytes()[0],
         ]
-    }
-
-    fn from_bytes(bytes: Self::Bytes, px_range: f64) -> Self {
-        Self {
-            r: f64::from_bytes([bytes[0]], px_range),
-            g: f64::from_bytes([bytes[1]], px_range),
-            b: f64::from_bytes([bytes[2]], px_range),
-        }
     }
 }
 

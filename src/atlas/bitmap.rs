@@ -1,7 +1,7 @@
 use crate::bitmap::{BitmapData, GlyphBitmapData};
 
 pub(super) struct BitmapDataRegion<'a, const N: usize> {
-    pub(super) data: &'a mut GlyphBitmapData<N>,
+    pub(super) data: &'a mut GlyphBitmapData<u8, N>,
     pub(super) x: usize,
     pub(super) y: usize,
     pub(super) width: usize,

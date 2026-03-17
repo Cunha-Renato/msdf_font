@@ -50,7 +50,6 @@ fn main() {
     let face = ttf_parser::Face::parse(include_bytes("OpenSans.ttf"), 0).unwrap();
 
     let mut glyph = GlyphBuilder::new(&face)
-        .field_type(FieldType::Msdf { max_angle: 3.0 })
         // .fix_geometry(true) If using fix_geometry feature.
         .px_range(2)
         .px_size(40)

@@ -14,43 +14,33 @@ impl Packer {
     const PADDING: usize = 1;
 
     pub(super) fn pack<T>(data: &mut [T], size_fn: impl Fn(&T) -> [usize; 2]) -> Self {
-        let mut total_area = 0;
+        // Sort by height descending.
+        data.sort_by(|a, b| size_fn(b)[1].cmp(&size_fn(a)[1]));
 
-        // Sort by height.
-        data.sort_by(|a, b| {
-            let size_a = size_fn(a);
-            let size_b = size_fn(b);
+        let sizes: Vec<[usize; 2]> = data.iter().map(|d| size_fn(d)).collect();
 
-            size_b[1].cmp(&size_a[1])
-        });
-
-        // Indexing the rects.
-        let rects_indexed = data
+        // Estimate atlas width from total area, but ensure it's at least as wide
+        // as the widest single rect to prevent underflow.
+        let total_area: usize = sizes
             .iter()
-            .map(|data| {
-                let size = size_fn(data);
-                total_area += (size[0] + Self::PADDING) * (size[1] + Self::PADDING);
+            .map(|s| (s[0] + Self::PADDING) * (s[1] + Self::PADDING))
+            .sum();
 
-                size
-            })
-            .collect::<Vec<_>>();
-
-        let width = if data.len() > 1 {
-            (total_area as f64).sqrt().ceil() as usize
-        } else {
-            size_fn(&data[0])[0]
-        };
+        let max_width = sizes.iter().map(|s| s[0]).max().unwrap_or(0);
+        let desired_width = ((total_area as f64).sqrt().ceil() as usize).max(max_width);
 
         let mut x_cursor = 0;
         let mut y_cursor = 0;
         let mut next_y_pos = 0;
-        let packed_rects = rects_indexed
+        let mut actual_width = 0;
+
+        let packed_rects = sizes
             .into_iter()
             .map(|size| {
                 let w = size[0];
                 let h = size[1];
 
-                if x_cursor + w > width {
+                if x_cursor + w > desired_width {
                     x_cursor = 0;
                     y_cursor = next_y_pos;
                 }
@@ -61,14 +51,15 @@ impl Packer {
                 };
 
                 x_cursor += w + Self::PADDING;
+                actual_width = actual_width.max(x_cursor - Self::PADDING);
                 next_y_pos = next_y_pos.max(y_cursor + h + Self::PADDING);
 
                 result
             })
-            .collect::<Vec<_>>();
+            .collect();
 
         Self {
-            width,
+            width: actual_width,
             height: next_y_pos.saturating_sub(Self::PADDING),
             rects: packed_rects,
         }

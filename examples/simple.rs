@@ -20,13 +20,13 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let (msdf, sdf) = {
         #[cfg(not(feature = "atlas"))]
-        let (msdf, sdf) = (glyph.msdf(3.0, false), glyph.sdf());
+        let (msdf, sdf) = (glyph.msdf(3.0, true), glyph.sdf());
 
         #[cfg(feature = "atlas")]
         let mut atlas = builder.build_atlas(char_data).unwrap();
 
         #[cfg(feature = "atlas")]
-        let (msdf, sdf) = (atlas.msdf(3.0, false), atlas.sdf());
+        let (msdf, sdf) = (atlas.msdf(3.0, true), atlas.sdf());
 
         (msdf, sdf)
     };

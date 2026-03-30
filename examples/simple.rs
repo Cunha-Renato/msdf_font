@@ -33,7 +33,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     image::save_buffer(
         "simple_msdf.png",
-        &msdf.bytes(),
+        msdf.bytes(),
         msdf.width as u32,
         msdf.height as u32,
         image::ColorType::Rgb8,
@@ -41,7 +41,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     image::save_buffer(
         "simple_sdf.png",
-        &sdf.bytes(),
+        sdf.bytes(),
         sdf.width as u32,
         sdf.height as u32,
         image::ColorType::L8,

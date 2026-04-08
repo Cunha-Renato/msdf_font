@@ -80,7 +80,7 @@ impl Edge {
                 }
 
                 SignedDistance::new(
-                    aq.cross(ab).signum() * enpoint_distance,
+                    aq.perp_dot(ab).signum() * enpoint_distance,
                     ab.normalize().dot(eq.normalize()).abs(),
                 )
             }
@@ -96,12 +96,12 @@ impl Edge {
                 let solutions = solve_cubic(&mut t, a, b, c, d);
 
                 let mut ep_dir = self.dir(0.0);
-                let mut min_distance = (ep_dir.cross(qa)).signum() * qa.length(); // distance from A
+                let mut min_distance = (ep_dir.perp_dot(qa)).signum() * qa.length(); // distance from A
                 *param = -qa.dot(ep_dir) / ep_dir.dot(ep_dir);
                 let distance = (p2 - p).length(); // distance from B
                 if distance < min_distance.abs() {
                     ep_dir = self.dir(1.0);
-                    min_distance = (ep_dir.cross(p2 - p)).signum() * distance;
+                    min_distance = (ep_dir.perp_dot(p2 - p)).signum() * distance;
                     *param = (p - p1).dot(ep_dir) / ep_dir.dot(ep_dir);
                 }
                 for t in t.into_iter().take(solutions) {
@@ -109,7 +109,7 @@ impl Edge {
                         let qe = qa + 2.0 * t * ab + t * t * br;
                         let distance = qe.length();
                         if distance <= min_distance.abs() {
-                            min_distance = (ab + t * br).cross(qe).signum() * distance;
+                            min_distance = (ab + t * br).perp_dot(qe).signum() * distance;
                             *param = t;
                         }
                     }
@@ -197,5 +197,5 @@ impl Edge {
 
 #[inline]
 fn is_corner(a: DVec2, b: DVec2, alpha: f64) -> bool {
-    a.dot(b) <= 0.0 || a.cross(b).abs() > alpha
+    a.dot(b) <= 0.0 || a.perp_dot(b).abs() > alpha
 }

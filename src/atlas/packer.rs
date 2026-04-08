@@ -1,3 +1,5 @@
+use std::ops::Range;
+
 #[derive(Debug)]
 pub(super) struct PackedRect {
     pub(super) x: usize,
@@ -13,46 +15,52 @@ impl Packer {
     // Padding in px for x and y;
     const PADDING: usize = 1;
 
-    pub(super) fn pack<T>(data: &mut [T], size_fn: impl Fn(&T) -> [usize; 2]) -> Self {
-        let mut total_area = 0;
+    pub(super) fn pack<T>(data: &mut Vec<T>, size_fn: impl Fn(&T) -> [usize; 2]) -> Self {
+        // Sort by height descending.
+        data.sort_by(|a, b| size_fn(b)[1].cmp(&size_fn(a)[1]));
 
-        // Sort by height.
-        data.sort_by(|a, b| {
-            let size_a = size_fn(a);
-            let size_b = size_fn(b);
+        let mut sizes: Vec<[usize; 2]> = data.iter().map(|d| size_fn(d)).collect();
 
-            size_b[1].cmp(&size_a[1])
-        });
-
-        // Indexing the rects.
-        let rects_indexed = data
+        // Estimate atlas width from total area, but ensure it's at least as wide
+        // as the widest single rect to prevent underflow.
+        let total_area: usize = sizes
             .iter()
-            .map(|data| {
-                let size = size_fn(data);
-                total_area += (size[0] + Self::PADDING) * (size[1] + Self::PADDING);
+            .map(|s| (s[0] + Self::PADDING) * (s[1] + Self::PADDING))
+            .sum();
 
-                size
-            })
-            .collect::<Vec<_>>();
-
-        let width = if data.len() > 1 {
-            (total_area as f64).sqrt().ceil() as usize
-        } else {
-            size_fn(&data[0])[0]
-        };
+        let max_width = sizes.iter().map(|s| s[0]).max().unwrap_or(0);
+        let desired_width = ((total_area as f64).sqrt().ceil() as usize).max(max_width);
 
         let mut x_cursor = 0;
         let mut y_cursor = 0;
         let mut next_y_pos = 0;
-        let packed_rects = rects_indexed
-            .into_iter()
-            .map(|size| {
-                let w = size[0];
-                let h = size[1];
+        let mut actual_width = 0;
 
-                if x_cursor + w > width {
-                    x_cursor = 0;
-                    y_cursor = next_y_pos;
+        let packed_rects = (0..sizes.len())
+            .map(|i| {
+                let mut w = sizes[i][0];
+                let mut h = sizes[i][1];
+
+                if x_cursor + w > desired_width {
+                    // Check if there's no other available glyph that fits the space.
+                    let avail_width = desired_width.saturating_sub(x_cursor);
+                    match Self::try_fit(&sizes, avail_width, (i + 1)..sizes.len()) {
+                        // Inserting the new Glyph. (not efficient but fuck it)
+                        Some(idx) => {
+                            let fits = sizes.remove(idx);
+                            sizes.insert(i, fits);
+
+                            let swp = data.remove(idx);
+                            data.insert(i, swp);
+
+                            w = sizes[i][0];
+                            h = sizes[i][1];
+                        }
+                        None => {
+                            x_cursor = 0;
+                            y_cursor = next_y_pos;
+                        }
+                    }
                 }
 
                 let result = PackedRect {
@@ -61,16 +69,42 @@ impl Packer {
                 };
 
                 x_cursor += w + Self::PADDING;
+                actual_width = actual_width.max(x_cursor - Self::PADDING);
                 next_y_pos = next_y_pos.max(y_cursor + h + Self::PADDING);
 
                 result
             })
-            .collect::<Vec<_>>();
+            .collect();
 
         Self {
-            width,
+            width: actual_width,
             height: next_y_pos.saturating_sub(Self::PADDING),
             rects: packed_rects,
         }
+    }
+
+    fn try_fit(sizes: &[[usize; 2]], avail_width: usize, range: Range<usize>) -> Option<usize> {
+        if avail_width == 0 {
+            return None;
+        }
+
+        let mut best_fit = None;
+        let mut last_area = 0;
+
+        for i in range {
+            let w = sizes[i][0];
+            let h = sizes[i][1];
+
+            if w <= avail_width {
+                let area = w * h;
+
+                if area > last_area {
+                    last_area = area;
+                    best_fit = Some(i);
+                }
+            }
+        }
+
+        best_fit
     }
 }

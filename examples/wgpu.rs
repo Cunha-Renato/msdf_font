@@ -555,8 +555,9 @@ impl AppCore {
             let mut cursor = [0.0, self.font.ascender * scale];
             let new_line = self.font.line_space * scale;
 
-            include_str!("assets/lorem_ipsum.txt")
-                .chars()
+            (0..0xff)
+                .filter_map(char::from_u32)
+                .chain(include_str!("assets/lorem_ipsum.txt").chars())
                 .filter_map(|c| {
                     if c == ' ' {
                         cursor[0] += self.font.space_advance[0] * scale;

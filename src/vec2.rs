@@ -4,18 +4,11 @@ use crate::bounds::Bounds;
 use glam::DVec2;
 
 pub(crate) trait Vec2Ext {
-    fn cross(self, rhs: Self) -> f64;
-
     fn orthonormal(self, polarity: bool, allow_zero: bool) -> Self;
 
     fn bound_point(&self, bounds: &mut Bounds);
 }
 impl Vec2Ext for DVec2 {
-    #[inline]
-    fn cross(self, b: Self) -> f64 {
-        self.x.mul_add(b.y, -(self.y * b.x))
-    }
-
     fn orthonormal(self, polarity: bool, allow_zero: bool) -> Self {
         let len = self.length();
 

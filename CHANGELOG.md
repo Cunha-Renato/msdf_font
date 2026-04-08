@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## 0.1.1
+## 0.2.0
 * Improved Atlas packer once again.
 
 ## 0.1.1

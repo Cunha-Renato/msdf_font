@@ -4,7 +4,6 @@ use crate::{
     distance::{MultiDistance, SignedDistance},
     edge::Edge,
     edge_color::EdgeColor,
-    vec2::Vec2Ext,
 };
 use glam::DVec2;
 
@@ -143,7 +142,7 @@ impl PerpendicularDistanceSelectorBase {
         let ts = ep.dot(edge_dir);
 
         if ts > 0.0 {
-            let perpendicular_distance = ep.cross(edge_dir);
+            let perpendicular_distance = ep.perp_dot(edge_dir);
 
             if perpendicular_distance.abs() < distance.abs() {
                 *distance = perpendicular_distance;
@@ -166,7 +165,7 @@ impl PerpendicularDistanceSelectorBase {
             let ts = aq.dot(dir);
 
             if ts < 0.0 {
-                let perpendicular_distance = aq.cross(dir);
+                let perpendicular_distance = aq.perp_dot(dir);
                 if perpendicular_distance.abs() <= distance.distance.abs() {
                     distance.distance = perpendicular_distance;
                     distance.dot = 0.0;
@@ -178,7 +177,7 @@ impl PerpendicularDistanceSelectorBase {
             let ts = bq.dot(dir);
 
             if ts > 0.0 {
-                let perpendicular_distance = bq.cross(dir);
+                let perpendicular_distance = bq.perp_dot(dir);
                 if perpendicular_distance.abs() <= distance.distance.abs() {
                     distance.distance = perpendicular_distance;
                     distance.dot = 0.0;

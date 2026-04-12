@@ -2,11 +2,11 @@
 
 use crate::solvers::solve_quadratic;
 
-pub const CANDIDATE: u8 = 1;
-pub const ARTIFACT: u8 = 2;
+pub(super) const CANDIDATE: u8 = 1;
+pub(super) const ARTIFACT: u8 = 2;
 
 /// An object that classifies artifacts in signed distance fields.
-pub trait ArtifactClassifier {
+pub(super) trait ArtifactClassifier {
     /// Evaluates whether the super::median value `xm` interpolated at `xt`
     /// in the range between `am` at `at` and `bm` at `bt` indicates
     /// an artifact.
@@ -90,7 +90,7 @@ fn has_linear_artifact_inner(
 ///   many times.
 /// * `a`: the color of the central texel
 /// * `b`: the color of the peripheral texel
-pub fn has_linear_artifact(
+pub(super) fn has_linear_artifact(
     classifier: &impl ArtifactClassifier,
     am: f64,
     a: [f64; 3],
@@ -181,7 +181,7 @@ fn has_diagonal_artifact_inner(
 /// * `b`, `c`: the colors of the two texels neighboring both `a`
 ///   and `d`
 /// * `d`: the color of the texel diagonally adjacent to `a`
-pub fn has_diagonal_artifact(
+pub(super) fn has_diagonal_artifact(
     classifier: &impl ArtifactClassifier,
     am: f64,
     a: &[f64; 3],
@@ -253,11 +253,10 @@ fn interpolated_median2(alq: &Alq, t: f64) -> f64 {
 /// An artifact classifier that recognizes artifacts based on the
 /// contents of the SDF alone.
 #[derive(Debug, Clone)]
-pub struct BaseArtifactClassifier {
-    pub span: f64,
-    pub protected: bool,
+pub(super) struct BaseArtifactClassifier {
+    pub(super) span: f64,
+    pub(super) protected: bool,
 }
-
 impl ArtifactClassifier for BaseArtifactClassifier {
     fn range_test(&self, at: f64, bt: f64, xt: f64, am: f64, bm: f64, xm: f64) -> u8 {
         if (am > 0.5 && bm > 0.5 && xm <= 0.5)

@@ -86,7 +86,7 @@ fn bench_px_size(c: &mut Criterion) {
 use std::time::Duration;
 criterion_group!(
     name = benches;
-    config = Criterion::default().measurement_time(Duration::from_secs(30));
+    config = Criterion::default().measurement_time(Duration::from_secs(60));
     targets = bench_build,
     bench_sdf,
     bench_msdf,

@@ -294,14 +294,24 @@ impl ErrorCorrection<'_> {
         }
     }
 
-    fn apply(&self, sdf: &mut impl BitmapData<Pixel = [f64; 3]>) {
+    fn apply(
+        &self,
+        sdf: &impl BitmapData<Pixel = [f64; 3]>,
+        bitmap: &mut impl BitmapData<Pixel = [u8; 3]>,
+    ) {
+        use crate::edge_selector::EdgeSelectorDistance;
+
         for y in 0..sdf.height() {
             for x in 0..sdf.width() {
+                let mut px = sdf.get_px(x, y);
+
                 if self.stencil.get_px(x, y)[0] & ERROR != 0 {
                     let p = sdf.get_px(x, y);
                     let m = median(p);
-                    sdf.set_px([m; 3], x, y);
+                    px = [m; 3];
                 }
+
+                bitmap.set_px(px.map(|p| p.to_bytes()[0]), x, y);
             }
         }
     }
@@ -341,15 +351,16 @@ fn get_error_correction_plan<'a>(
 }
 
 pub(crate) fn correct_error_msdf(
-    msdf: &mut impl BitmapData<Pixel = [f64; 3]>,
     shape: &Shape,
     range: f64,
     config: &ErrorCorrectionConfig,
+    msdf: &mut impl BitmapData<Pixel = [f64; 3]>,
+    bitmap: &mut impl BitmapData<Pixel = [u8; 3]>,
 ) {
     let mut stencil = GlyphBitmapData::<u8, 1>::new(msdf.width(), msdf.height());
     let correction = get_error_correction_plan(&mut stencil, msdf, shape, range, config);
 
-    correction.apply(msdf);
+    correction.apply(msdf, bitmap);
 }
 
 // UTILS

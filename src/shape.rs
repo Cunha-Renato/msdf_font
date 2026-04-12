@@ -103,16 +103,13 @@ impl Shape {
             d.normalize(px_range)
         });
 
-        correct_error_msdf(&mut normalized_bitmap, self, px_range, &Default::default());
-
-        // Copy normalized distances to the output bitmap, converting to bytes.
-        for y in 0..bitmap.height() {
-            for x in 0..bitmap.width() {
-                let p = normalized_bitmap.get_px(x, y).map(|p| p.to_bytes()[0]);
-
-                bitmap.set_px(p, x, y);
-            }
-        }
+        correct_error_msdf(
+            self,
+            px_range,
+            &Default::default(),
+            &mut normalized_bitmap,
+            bitmap,
+        );
     }
 
     fn coloring_simple(&mut self, alpha: f64, mut seed: usize) {

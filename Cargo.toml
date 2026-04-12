@@ -13,9 +13,9 @@ description = "Msdf implementation in Rust"
 glam = "0.32"
 ttf-parser = "0.25"
 
-kurbo = { version = "0.13", optional = true }
-linesweeper = { version = "0.3", optional = true }
-rayon = { version = "1.0", optional = true }
+kurbo = { version = "0.13" }
+linesweeper = { version = "0.3" }
+rayon = { version = "1.0" }
 
 [dev-dependencies]
 glam = "0.32"
@@ -24,12 +24,21 @@ winit = "0.30"
 wgpu = "28.0"
 pollster = "0.4"
 bytemuck = { version = "1.0", features = ["derive"] }
+criterion = { version = "0.8", features = ["html_reports"] }
 
 [features]
-atlas = ["dep:rayon"]
-fix_geometry = ["dep:kurbo", "dep:linesweeper"]
+atlas = []
 
 [lints.clippy]
 perf = "deny"
 unwrap_used = "deny"
 complexity = "deny"
+
+[[bench]]
+name = "glyph"
+harness = false
+
+[[bench]]
+name = "atlas"
+harness = false
+required-features = ["atlas"]

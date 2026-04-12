@@ -34,8 +34,6 @@ impl<T: Copy + std::ops::Sub<Output = T>> GlyphBounds<T> {
 pub struct GlyphBuilder<'a> {
     face: &'a Face<'a>,
     build_config: BuildConfig,
-    #[cfg(feature = "fix_geometry")]
-    fix_geometry: bool,
 }
 impl<'a> GlyphBuilder<'a> {
     const DEFAULT_PX_RANGE: f64 = 2.0;
@@ -49,8 +47,6 @@ impl<'a> GlyphBuilder<'a> {
                 scale: scale_value(Self::DEFAULT_PX_SIZE, face),
                 ..Default::default()
             },
-            #[cfg(feature = "fix_geometry")]
-            fix_geometry: false,
         }
     }
 
@@ -70,27 +66,9 @@ impl<'a> GlyphBuilder<'a> {
         self
     }
 
-    /// Fixes overlapping contours, and other geometry issues.
-    /// This is super expensive to compute.
-    ///
-    /// Default is [`false`].
-    #[cfg(feature = "fix_geometry")]
-    #[inline]
-    pub const fn fix_geometry(mut self, fix_geometry: bool) -> Self {
-        self.fix_geometry = fix_geometry;
-        self
-    }
-
     pub fn build(mut self, c: char) -> Option<Glyph> {
-        let mut shape = Shape::new(self.build_config.scale);
         let glyph_id = self.face.glyph_index(c)?;
-
-        self.face.outline_glyph(glyph_id, &mut shape);
-
-        #[cfg(feature = "fix_geometry")]
-        if self.fix_geometry {
-            shape.resolve_shape_geometry();
-        }
+        let shape = Shape::new(self.face, glyph_id, self.build_config.scale)?;
 
         let mut bitmap_bounds = shape.bounds();
         let bitmap_size = bitmap_bounds.size();

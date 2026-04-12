@@ -14,22 +14,28 @@ use crate::{
 };
 use core::f64;
 use glam::DVec2;
+use kurbo::BezPath;
+use linesweeper::topology::Topology;
 use ttf_parser::OutlineBuilder;
 
 #[derive(Debug)]
 pub(crate) struct Shape {
     pub(crate) contours: Vec<Contour>,
-    position: DVec2,
-    scale: f64,
 }
 impl Shape {
     #[inline]
-    pub(crate) const fn new(scale: f64) -> Self {
-        Self {
-            contours: vec![],
-            position: DVec2::ZERO,
-            scale,
-        }
+    pub(crate) fn new(
+        face: &ttf_parser::Face,
+        glyph_id: ttf_parser::GlyphId,
+        scale: f64,
+    ) -> Option<Self> {
+        let mut outliner = ShapeOutliner::new(scale);
+
+        face.outline_glyph(glyph_id, &mut outliner);
+
+        Some(Self {
+            contours: outliner.into_contours()?,
+        })
     }
 
     pub(crate) fn bounds(&self) -> Bounds {
@@ -41,50 +47,23 @@ impl Shape {
         bounds
     }
 
-    fn generate_normalized_distance_field<
-        E: EdgeSelector<Distance = impl EdgeSelectorDistance<Normalized = P>>,
-        P,
-        B: BitmapData<Pixel = P>,
-    >(
+    fn generate_field<E, P, B>(
         &self,
         bitmap: &mut B,
-        px_range: f64,
         offset: DVec2,
-    ) {
-        let mut shape_distance_finder = ShapeDistanceFinder::<E>::new(self);
-        for y in 0..bitmap.height() {
-            for x in 0..bitmap.width() {
-                let p =
-                    DVec2::new(x as f64 + 0.5, bitmap.height() as f64 - (y as f64 + 0.5)) + offset;
-
-                let bytes = shape_distance_finder.distance(p).normalize(px_range);
-
-                bitmap.set_px(bytes, x, y);
-            }
-        }
-    }
-
-    fn generate_distance_field<
-        E: EdgeSelector<Distance = impl EdgeSelectorDistance<Bytes = P>>,
-        P,
+        convert: impl Fn(E::Distance) -> P,
+    ) where
+        E: EdgeSelector,
         B: BitmapData<Pixel = P>,
-    >(
-        &self,
-        bitmap: &mut B,
-        px_range: f64,
-        offset: DVec2,
-    ) {
+    {
         let mut shape_distance_finder = ShapeDistanceFinder::<E>::new(self);
+        let height = bitmap.height() as f64;
+
         for y in 0..bitmap.height() {
+            let py = height - (y as f64 + 0.5) + offset.y;
             for x in 0..bitmap.width() {
-                let p =
-                    DVec2::new(x as f64 + 0.5, bitmap.height() as f64 - (y as f64 + 0.5)) + offset;
-
-                let bytes = shape_distance_finder
-                    .distance(p)
-                    .normalize_to_bytes(px_range);
-
-                bitmap.set_px(bytes, x, y);
+                let p = DVec2::new(x as f64 + 0.5 + offset.x, py);
+                bitmap.set_px(convert(shape_distance_finder.distance(p)), x, y);
             }
         }
     }
@@ -96,7 +75,9 @@ impl Shape {
         offset: DVec2,
         bitmap: &mut impl BitmapData<Pixel = [u8; 1]>,
     ) {
-        self.generate_distance_field::<TrueDistanceSelector, _, _>(bitmap, px_range, offset)
+        self.generate_field::<TrueDistanceSelector, _, _>(bitmap, offset, |d| {
+            d.normalize_to_bytes(px_range)
+        })
     }
 
     #[inline]
@@ -111,17 +92,17 @@ impl Shape {
         self.coloring_simple(max_angle, 0);
 
         if !error_correction {
-            self.generate_distance_field::<MultiDistanceSelector, _, _>(bitmap, px_range, offset);
+            self.generate_field::<MultiDistanceSelector, _, _>(bitmap, offset, |d| {
+                d.normalize_to_bytes(px_range)
+            });
             return;
         }
 
         let mut normalized_bitmap = GlyphBitmapData::<f64, 3>::new(bitmap.width(), bitmap.height());
+        self.generate_field::<MultiDistanceSelector, _, _>(&mut normalized_bitmap, offset, |d| {
+            d.normalize(px_range)
+        });
 
-        self.generate_normalized_distance_field::<MultiDistanceSelector, _, _>(
-            &mut normalized_bitmap,
-            px_range,
-            offset,
-        );
         correct_error_msdf(&mut normalized_bitmap, self, px_range, &Default::default());
 
         // Copy normalized distances to the output bitmap, converting to bytes.
@@ -130,76 +111,6 @@ impl Shape {
                 let p = normalized_bitmap.get_px(x, y).map(|p| p.to_bytes()[0]);
 
                 bitmap.set_px(p, x, y);
-            }
-        }
-    }
-
-    #[cfg(feature = "fix_geometry")]
-    pub(crate) fn resolve_shape_geometry(&mut self) {
-        use crate::edge::EdgeType;
-        use kurbo::{BezPath, Point};
-        use linesweeper::topology::Topology;
-
-        if self.contours.is_empty() {
-            return;
-        }
-
-        // Build a single BezPath from all contours
-        let mut path = BezPath::new();
-        for contour in &self.contours {
-            if contour.edges.is_empty() {
-                continue;
-            }
-
-            let mut edges = contour.edges.iter();
-            let Some(first) = edges.next() else { continue };
-
-            let start = match first.etype {
-                EdgeType::Line { p0, .. } => p0,
-                EdgeType::Quad { p0, .. } => p0,
-            };
-
-            path.move_to(Point::new(start.x, start.y));
-
-            for edge in std::iter::once(first).chain(edges) {
-                match edge.etype {
-                    EdgeType::Line { p1, .. } => path.line_to(Point::new(p1.x, p1.y)),
-                    EdgeType::Quad { p1, p2, .. } => {
-                        path.quad_to(Point::new(p1.x, p1.y), Point::new(p2.x, p2.y))
-                    }
-                }
-            }
-
-            path.close_path();
-        }
-
-        // from_path returns Result<Topology<i32>, NonClosedPath>
-        let topo = match Topology::from_path(&path, 1e-6) {
-            Ok(t) => t,
-            Err(_) => return,
-        };
-
-        // contours() takes a closure: winding number -> is inside?
-        // NonZero rule: any non-zero winding is "inside"
-        let contours = topo.contours(|w| *w != 0);
-
-        self.contours.clear();
-
-        for contour in contours.contours() {
-            for path in contour.path.iter() {
-                match path {
-                    kurbo::PathEl::MoveTo(p) => self.move_to_scaled(DVec2::new(p.x, p.y)),
-                    kurbo::PathEl::LineTo(p) => self.line_to_scaled(DVec2::new(p.x, p.y)),
-                    kurbo::PathEl::QuadTo(p0, p1) => {
-                        self.quad_to_scaled(DVec2::new(p0.x, p0.y), DVec2::new(p1.x, p1.y))
-                    }
-                    kurbo::PathEl::CurveTo(p0, p1, p2) => self.curve_to_scaled(
-                        DVec2::new(p0.x, p0.y),
-                        DVec2::new(p1.x, p1.y),
-                        DVec2::new(p2.x, p2.y),
-                    ),
-                    kurbo::PathEl::ClosePath => self.close(),
-                }
             }
         }
     }
@@ -294,57 +205,105 @@ impl Shape {
             }
         }
     }
+}
+
+struct ShapeOutliner {
+    path: BezPath,
+    scale: f64,
+}
+impl ShapeOutliner {
+    #[inline]
+    fn new(scale: f64) -> Self {
+        Self {
+            path: BezPath::new(),
+            scale,
+        }
+    }
 
     #[inline]
-    fn scale_point(&self, x: f32, y: f32) -> DVec2 {
-        DVec2::new(f64::from(x), f64::from(y)) * self.scale
-    }
-}
-impl Shape {
-    fn move_to_scaled(&mut self, point: DVec2) {
-        self.contours.push(Contour::default());
-        self.position = point;
-    }
-
-    fn line_to_scaled(&mut self, point: DVec2) {
-        if point != self.position {
-            if let Some(last) = self.contours.last_mut() {
-                last.edges.push(Edge::new_line(self.position, point));
-            }
-
-            self.position = point;
+    fn scale_point(&self, x: f32, y: f32) -> kurbo::Point {
+        kurbo::Point {
+            x: f64::from(x) * self.scale,
+            y: f64::from(y) * self.scale,
         }
     }
 
-    fn quad_to_scaled(&mut self, control: DVec2, endpoint: DVec2) {
-        if endpoint != self.position {
-            if let Some(last) = self.contours.last_mut() {
-                last.edges
-                    .push(Edge::new_quad(self.position, control, endpoint));
-            }
-
-            self.position = endpoint;
-        }
+    #[inline]
+    fn move_to_scaled(&mut self, point: kurbo::Point) {
+        self.path.move_to(point);
     }
 
-    fn curve_to_scaled(&mut self, control: DVec2, control1: DVec2, endpoint: DVec2) {
-        let p0 = self.position;
+    #[inline]
+    fn line_to_scaled(&mut self, point: kurbo::Point) {
+        self.path.line_to(point);
+    }
 
-        if endpoint != self.position {
-            let mut quads = Vec::new();
-            cubic_to_quads(p0, control, control1, endpoint, 0.03, &mut quads); // tolerance in scaled units
+    #[inline]
+    fn quad_to_scaled(&mut self, p1: kurbo::Point, p2: kurbo::Point) {
+        self.path.quad_to(p1, p2);
+    }
 
-            if let Some(contour) = self.contours.last_mut() {
-                for q in quads {
-                    contour.edges.push(Edge::new_quad(q[0], q[1], q[2]));
+    #[inline]
+    fn curve_to_scaled(&mut self, p1: kurbo::Point, p2: kurbo::Point, p3: kurbo::Point) {
+        self.path.curve_to(p1, p2, p3);
+    }
+
+    fn into_contours(self) -> Option<Vec<Contour>> {
+        use kurbo::PathEl;
+
+        let topo = Topology::from_path(&self.path, 1e-6).ok()?;
+        let _contours = topo.contours(|w| *w != 0);
+
+        let mut _quad_buffer = Vec::new();
+        let contours = _contours
+            .contours()
+            .map(|c| {
+                let mut edges = Vec::new();
+                let mut position = DVec2::ZERO;
+
+                for path in c.path.iter() {
+                    match path {
+                        PathEl::MoveTo(p) => position = DVec2::new(p.x, p.y),
+                        PathEl::LineTo(p) => {
+                            let p = DVec2::new(p.x, p.y);
+                            edges.push(Edge::new_line(position, p));
+                            position = p;
+                        }
+                        PathEl::QuadTo(p, p1) => {
+                            let p = DVec2::new(p.x, p.y);
+                            let p1 = DVec2::new(p1.x, p1.y);
+
+                            edges.push(Edge::new_quad(position, p, p1));
+                            position = p1;
+                        }
+                        PathEl::CurveTo(p, p1, p2) => {
+                            let p = DVec2::new(p.x, p.y);
+                            let p1 = DVec2::new(p1.x, p1.y);
+                            let p2 = DVec2::new(p2.x, p2.y);
+
+                            _quad_buffer.clear();
+                            cubic_to_quads(position, p, p1, p2, 0.03, &mut _quad_buffer);
+
+                            edges.extend(
+                                _quad_buffer
+                                    .iter()
+                                    .map(|q| Edge::new_quad(q[0], q[1], q[2])),
+                            );
+
+                            position = p2;
+                        }
+                        _ => {}
+                    }
                 }
-            }
 
-            self.position = endpoint;
-        }
+                Contour { edges }
+            })
+            .collect::<Vec<_>>();
+
+        Some(contours)
     }
 }
-impl OutlineBuilder for Shape {
+impl OutlineBuilder for ShapeOutliner {
     #[inline]
     fn move_to(&mut self, x: f32, y: f32) {
         self.move_to_scaled(self.scale_point(x, y));
@@ -373,7 +332,9 @@ impl OutlineBuilder for Shape {
         self.curve_to_scaled(p1, p2, p3);
     }
 
-    fn close(&mut self) {}
+    fn close(&mut self) {
+        self.path.close_path();
+    }
 }
 
 fn cubic_to_quads(
@@ -395,7 +356,7 @@ fn cubic_to_quads(
     // Quad midpoint at t=0.5
     let quad_mid = p0 * 0.25 + q1 * 0.5 + p3 * 0.25;
 
-    if (cubic_mid - quad_mid).length() <= tolerance {
+    if (cubic_mid - quad_mid).length_squared() <= tolerance * tolerance {
         out.push([p0, q1, p3]);
     } else {
         let (left, right) = split_cubic(p0, p1, p2, p3, 0.5);

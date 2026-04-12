@@ -12,9 +12,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let builder = GlyphBuilder::new(&face).px_range(2).px_size(100);
 
-    #[cfg(feature = "fix_geometry")]
-    let builder = builder.fix_geometry(true);
-
     #[cfg(not(feature = "atlas"))]
     let mut glyph = builder.build(char_data).unwrap();
 

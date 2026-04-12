@@ -5,7 +5,9 @@ use crate::{
     Glyph, GlyphBitmapData, GlyphBounds, GlyphBuilder, GlyphData,
     atlas::{bitmap::BitmapDataRegion, packer::Packer},
 };
-use rayon::iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
+use rayon::iter::{
+    IndexedParallelIterator, IntoParallelRefMutIterator, ParallelBridge, ParallelIterator,
+};
 use std::collections::HashMap;
 
 /// Similar to [`crate::GlyphData`] but for the atlas mode.
@@ -21,7 +23,7 @@ impl<'a> GlyphBuilder<'a> {
     /// See [`crate::GlyphBuilder::build`].
     ///
     /// For the packing it uses a simple height based packer.
-    pub fn build_atlas(self, c: impl IntoIterator<Item = char>) -> Option<Atlas> {
+    pub fn build_atlas(self, c: impl IntoIterator<Item = char, IntoIter: Send>) -> Option<Atlas> {
         struct GlyphChar {
             glyph: Glyph,
             c: char,
@@ -29,6 +31,7 @@ impl<'a> GlyphBuilder<'a> {
 
         let mut glyphs_char = c
             .into_iter()
+            .par_bridge()
             .filter_map(|c| {
                 let glyph = self.build(c)?;
 

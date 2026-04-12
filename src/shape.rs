@@ -116,15 +116,17 @@ impl Shape {
         let sin_alpha = alpha.sin();
 
         for contour in &mut self.contours {
-            let mut corners = Vec::new();
+            let edges = &mut contour.edges;
+            let len = edges.len();
+            let mut corners = Vec::with_capacity(len);
 
-            if let Some(last_edge) = contour.edges.last() {
-                if last_edge.is_corner(&contour.edges[0], sin_alpha) {
+            if let Some(last_edge) = edges.last() {
+                if last_edge.is_corner(&edges[0], sin_alpha) {
                     corners.push(0);
                 }
 
-                for i in 0..(contour.edges.len() - 1) {
-                    if contour.edges[i].is_corner(&contour.edges[i + 1], sin_alpha) {
+                for i in 0..(len - 1) {
+                    if edges[i].is_corner(&edges[i + 1], sin_alpha) {
                         corners.push(i + 1);
                     }
                 }
@@ -132,7 +134,7 @@ impl Shape {
 
             let s = corners.first().copied().unwrap_or(0);
             if s != 0 {
-                contour.edges.rotate_left(s);
+                edges.rotate_left(s);
                 for c in &mut corners {
                     *c -= s;
                 }
@@ -144,11 +146,11 @@ impl Shape {
 
                 let colors = [color, EdgeColor::WHITE, color2];
 
-                match contour.edges.len() {
+                match len {
                     0 => (),
                     1 => {
-                        let split = contour.edges[0].split_in_thirds();
-                        contour.edges = split
+                        let split = edges[0].split_in_thirds();
+                        *edges = split
                             .into_iter()
                             .zip(colors)
                             .map(|(mut edge, color)| {
@@ -158,9 +160,9 @@ impl Shape {
                             .collect();
                     }
                     2 => {
-                        let split_0 = contour.edges[0].split_in_thirds();
-                        let split_1 = contour.edges[1].split_in_thirds();
-                        contour.edges = split_0
+                        let split_0 = edges[0].split_in_thirds();
+                        let split_1 = edges[1].split_in_thirds();
+                        *edges = split_0
                             .into_iter()
                             .chain(split_1)
                             .enumerate()
@@ -171,21 +173,21 @@ impl Shape {
                             .collect();
                     }
                     _ => {
-                        let num_edge = contour.edges.len();
+                        let num_edge = len;
 
-                        for (i, edge) in contour.edges.iter_mut().enumerate() {
+                        for (i, edge) in edges.iter_mut().enumerate() {
                             // WTF is this?
                             let index = (num_edge - 1 + 46 * i) / (16 * (num_edge - 1));
                             edge.color = colors[index];
                         }
                     }
                 }
-            } else if !contour.edges.is_empty() {
+            } else if !edges.is_empty() {
                 let mut spline = 0;
                 let mut color = EdgeColor::WHITE.switch(&mut seed, EdgeColor::BLACK);
                 let initial_color = color;
 
-                for (i, edge) in contour.edges.iter_mut().enumerate() {
+                for (i, edge) in edges.iter_mut().enumerate() {
                     if corners.get(spline + 1) == Some(&i) {
                         spline += 1;
                         color = color.switch(

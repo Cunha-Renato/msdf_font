@@ -336,21 +336,18 @@ impl Font {
 
         let builder = GlyphBuilder::new(&face).px_range(4).px_size(40);
 
-        #[cfg(feature = "fix_geometry")]
-        let builder = builder.fix_geometry(true);
-
         #[cfg(not(feature = "atlas"))]
         let mut glyph = builder.build('ç').unwrap();
 
         #[cfg(not(feature = "atlas"))]
-        let (sdf, msdf) = { (glyph.sdf(), glyph.msdf(3.0, false)) };
+        let (sdf, msdf) = { (glyph.sdf(), glyph.msdf(3.0, true)) };
 
         #[cfg(feature = "atlas")]
         let (sdf, msdf, atlas) = {
             let chars = (0..0xff).filter_map(char::from_u32);
             let mut atlas = builder.build_atlas(chars).unwrap();
 
-            (atlas.sdf(), atlas.msdf(3.0, false), atlas)
+            (atlas.sdf(), atlas.msdf(3.0, true), atlas)
         };
 
         #[cfg(feature = "atlas")]

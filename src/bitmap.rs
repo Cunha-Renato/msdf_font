@@ -53,10 +53,9 @@ impl<T: Copy, const N: usize> BitmapData for GlyphBitmapData<T, N> {
         self.height
     }
 
+    #[inline]
     fn set_px(&mut self, px: Self::Pixel, x: usize, y: usize) {
-        let j = y * self.width + x;
-
-        (0..N).for_each(|i| self.bytes[j][i] = px[i]);
+        self.bytes[y * self.width + x] = px;
     }
 
     #[inline]

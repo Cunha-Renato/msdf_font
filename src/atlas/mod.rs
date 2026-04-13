@@ -5,9 +5,7 @@ use crate::{
     Glyph, GlyphBitmapData, GlyphBounds, GlyphBuilder, GlyphData,
     atlas::{bitmap::BitmapDataRegion, packer::Packer},
 };
-use rayon::iter::{
-    IndexedParallelIterator, IntoParallelRefMutIterator, ParallelBridge, ParallelIterator,
-};
+use rayon::iter::{ParallelBridge, ParallelIterator};
 use std::collections::HashMap;
 
 /// Similar to [`crate::GlyphData`] but for the atlas mode.

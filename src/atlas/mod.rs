@@ -121,8 +121,10 @@ impl Atlas {
         let bitmap_ptr = &mut bitmap as *mut GlyphBitmapData<u8, N> as usize;
 
         self.glyphs
-            .par_iter_mut()
+            // .par_iter_mut()
+            .iter_mut()
             .zip(&self.packer.rects)
+            .par_bridge()
             .for_each(|(g, rect)| {
                 let bitmap_ref = unsafe { &mut *(bitmap_ptr as *mut GlyphBitmapData<u8, N>) };
 

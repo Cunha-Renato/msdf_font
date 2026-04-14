@@ -23,7 +23,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         let mut atlas = builder.build_atlas(char_data).unwrap();
 
         #[cfg(feature = "atlas")]
-        let (msdf, sdf) = (atlas.msdf(3.0, true), atlas.sdf());
+        let (msdf, sdf) = (atlas.msdf(3.0, false), atlas.sdf());
 
         (msdf, sdf)
     };

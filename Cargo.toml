@@ -34,6 +34,11 @@ perf = "deny"
 unwrap_used = "deny"
 complexity = "deny"
 
+[profile.bench]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+
 [[bench]]
 name = "glyph"
 harness = false

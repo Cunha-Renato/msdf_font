@@ -51,12 +51,37 @@ impl Edge {
         }
     }
 
-    pub(crate) fn dir(&self, param: f64) -> DVec2 {
+    #[inline]
+    pub(crate) fn point_0(&self) -> DVec2 {
+        match self.etype {
+            EdgeType::Line { p0, .. } | EdgeType::Quad { p0, .. } => p0,
+        }
+    }
+
+    #[inline]
+    pub(crate) fn point_1(&self) -> DVec2 {
+        match self.etype {
+            EdgeType::Line { p1, .. } => p1,
+            EdgeType::Quad { p2, .. } => p2,
+        }
+    }
+
+    pub(crate) fn dir_0(&self) -> DVec2 {
         match self.etype {
             EdgeType::Line { p0, p1 } => p1 - p0,
             EdgeType::Quad { p0, p1, p2 } => {
-                let tan = (p1 - p0).lerp(p2 - p1, param);
-                if tan == DVec2::ZERO { p2 - p1 } else { tan }
+                let tan = p1 - p0;
+                if tan == DVec2::ZERO { p2 - p0 } else { tan }
+            }
+        }
+    }
+
+    pub(crate) fn dir_1(&self) -> DVec2 {
+        match self.etype {
+            EdgeType::Line { p0, p1 } => p1 - p0,
+            EdgeType::Quad { p0, p1, p2 } => {
+                let tan = p2 - p1;
+                if tan == DVec2::ZERO { p2 - p0 } else { tan }
             }
         }
     }
@@ -95,12 +120,12 @@ impl Edge {
                 let mut t = [0.0; 3];
                 let solutions = solve_cubic(&mut t, a, b, c, d);
 
-                let mut ep_dir = self.dir(0.0);
+                let mut ep_dir = self.dir_0();
                 let mut min_distance = (ep_dir.perp_dot(qa)).signum() * qa.length(); // distance from A
                 *param = -qa.dot(ep_dir) / ep_dir.dot(ep_dir);
                 let distance = (p2 - p).length(); // distance from B
                 if distance < min_distance.abs() {
-                    ep_dir = self.dir(1.0);
+                    ep_dir = self.dir_1();
                     min_distance = (ep_dir.perp_dot(p2 - p)).signum() * distance;
                     *param = (p - p1).dot(ep_dir) / ep_dir.dot(ep_dir);
                 }
@@ -121,12 +146,12 @@ impl Edge {
                 if *param < 0.5 {
                     SignedDistance::new(
                         min_distance,
-                        self.dir(0.0).normalize().dot(qa.normalize()).abs(),
+                        self.dir_0().normalize().dot(qa.normalize()).abs(),
                     )
                 } else {
                     SignedDistance::new(
                         min_distance,
-                        self.dir(1.0).normalize().dot((p2 - p).normalize()).abs(),
+                        self.dir_1().normalize().dot((p2 - p).normalize()).abs(),
                     )
                 }
             }
@@ -191,7 +216,7 @@ impl Edge {
 
     #[inline]
     pub(crate) fn is_corner(&self, other: &Self, alpha: f64) -> bool {
-        is_corner(self.dir(1.0), other.dir(0.0), alpha)
+        is_corner(self.dir_1(), other.dir_0(), alpha)
     }
 }
 

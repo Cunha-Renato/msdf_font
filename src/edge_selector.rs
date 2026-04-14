@@ -160,8 +160,8 @@ impl PerpendicularDistanceSelectorBase {
         param: f64,
     ) {
         if param < 0.0 {
-            let dir = edge.dir(0.0).normalize();
-            let aq = origin - edge.point(0.0);
+            let dir = edge.dir_0().normalize();
+            let aq = origin - edge.point_0();
             let ts = aq.dot(dir);
 
             if ts < 0.0 {
@@ -172,8 +172,8 @@ impl PerpendicularDistanceSelectorBase {
                 }
             }
         } else if param > 1.0 {
-            let dir = edge.dir(1.0).normalize();
-            let bq = origin - edge.point(1.0);
+            let dir = edge.dir_1().normalize();
+            let bq = origin - edge.point_1();
             let ts = bq.dot(dir);
 
             if ts > 0.0 {
@@ -244,12 +244,12 @@ impl EdgeSelector for MultiDistanceSelector {
             self.b.add_true_edge_distance(*edge, distance, param);
         }
 
-        let ap = self.p - edge.point(0.0);
-        let bp = self.p - edge.point(1.0);
-        let a_dir = edge.dir(0.0).normalize_or_zero();
-        let b_dir = edge.dir(1.0).normalize_or_zero();
-        let prev_dir = prev.dir(1.0).normalize_or_zero();
-        let next_dir = next.dir(0.0).normalize_or_zero();
+        let ap = self.p - edge.point_0();
+        let bp = self.p - edge.point_1();
+        let a_dir = edge.dir_0().normalize_or_zero();
+        let b_dir = edge.dir_1().normalize_or_zero();
+        let prev_dir = prev.dir_1().normalize_or_zero();
+        let next_dir = next.dir_0().normalize_or_zero();
 
         let add = ap.dot((prev_dir + a_dir).normalize_or_zero());
         let bdd = -bp.dot((b_dir + next_dir).normalize_or_zero());

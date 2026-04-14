@@ -98,7 +98,7 @@ impl ErrorCorrection<'_> {
 
                 let common_color = prev.color & curr.color;
                 if !common_color.is_bright() {
-                    let p = curr.point(0.0);
+                    let p = curr.point_0();
                     let l = (p.x - 0.5).floor() as isize;
                     let b = (p.y - 0.5).floor() as isize;
                     let r = l + 1;

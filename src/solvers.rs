@@ -34,29 +34,33 @@ pub(crate) fn solve_quadratic(x: &mut [f64], a: f64, b: f64, c: f64) -> usize {
 
 fn solve_cubic_normed(x: &mut [f64; 3], mut a: f64, b: f64, c: f64) -> usize {
     let a2 = a * a;
-    let mut q = 1.0 / 9.0 * (a2 - 3.0 * b);
-    let r = 1.0 / 54.0 * (a * (2.0 * a2 - 9.0 * b) + 27.0 * c);
+    let q = (a2 - 3.0 * b) * (1.0 / 9.0);
+    let r = (a * (2.0 * a2 - 9.0 * b) + 27.0 * c) * (1.0 / 54.0);
     let r2 = r * r;
     let q3 = q * q * q;
     a *= 1.0 / 3.0;
 
     if r2 < q3 {
         let t = (r / q3.sqrt()).clamp(-1.0, 1.0).acos();
+        let q_sqrt = -2.0 * q.sqrt();
+        let t_third = t * (1.0 / 3.0);
 
-        q = -2.0 * q.sqrt();
-        x[0] = q * (1.0 / 3.0 * t).cos() - a;
-        x[1] = q * (1.0 / 3.0 * (t + 2.0 * f64::consts::PI)).cos() - a;
-        x[2] = q * (1.0 / 3.0 * (t - 2.0 * f64::consts::PI)).cos() - a;
+        x[0] = q_sqrt * t_third.cos() - a;
+        x[1] = q_sqrt * (t_third + (2.0 / 3.0) * f64::consts::PI).cos() - a;
+        x[2] = q_sqrt * (t_third - (2.0 / 3.0) * f64::consts::PI).cos() - a;
 
         3
     } else {
-        let u = if r < 0.0 { 1.0 } else { -1.0 } * (r.abs() + (r2 - q3).sqrt()).powf(1.0 / 3.0);
-
+        let sign = if r < 0.0 { 1.0 } else { -1.0 };
+        let u = sign * (r.abs() + (r2 - q3).sqrt()).cbrt();
         let v = if u == 0.0 { 0.0 } else { q / u };
-        x[0] = (u + v) - a;
-        if (u - v).abs() < f64::EPSILON || (u - v).abs() < 1e-12 * (u + v).abs() {
-            x[1] = -0.5 * (u + v) - a;
+        let uv_sum = u + v;
+        let uv_diff = u - v;
 
+        x[0] = uv_sum - a;
+
+        if uv_diff.abs() < f64::EPSILON || uv_diff.abs() < 1e-12 * uv_sum.abs() {
+            x[1] = -0.5 * uv_sum - a;
             return 2;
         }
 

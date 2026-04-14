@@ -1,5 +1,7 @@
 use std::ops::Range;
 
+use crate::atlas::GlyphChar;
+
 #[derive(Debug)]
 pub(super) struct PackedRect {
     pub(super) x: usize,
@@ -15,11 +17,21 @@ impl Packer {
     // Padding in px for x and y;
     const PADDING: usize = 1;
 
-    pub(super) fn pack<T>(data: &mut Vec<T>, size_fn: impl Fn(&T) -> [usize; 2]) -> Self {
+    pub(super) fn pack(data: &mut Vec<GlyphChar>) -> Self {
         // Sort by height descending.
-        data.sort_by(|a, b| size_fn(b)[1].cmp(&size_fn(a)[1]));
+        data.sort_by(|a, b| {
+            b.glyph.build_config.bitmap_size[1]
+                .cmp(&a.glyph.build_config.bitmap_size[1])
+                .then_with(|| {
+                    b.glyph.build_config.bitmap_size[0].cmp(&a.glyph.build_config.bitmap_size[0])
+                })
+                .then_with(|| b.c.cmp(&a.c))
+        });
 
-        let mut sizes: Vec<[usize; 2]> = data.iter().map(|d| size_fn(d)).collect();
+        let mut sizes: Vec<[usize; 2]> = data
+            .iter()
+            .map(|d| d.glyph.build_config.bitmap_size)
+            .collect();
 
         // Estimate atlas width from total area, but ensure it's at least as wide
         // as the widest single rect to prevent underflow.

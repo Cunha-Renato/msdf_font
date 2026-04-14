@@ -8,6 +8,11 @@ use crate::{
 use rayon::iter::{ParallelBridge, ParallelIterator};
 use std::collections::HashMap;
 
+struct GlyphChar {
+    glyph: Glyph,
+    c: char,
+}
+
 /// Similar to [`crate::GlyphData`] but for the atlas mode.
 #[derive(Debug)]
 pub struct AtlasGlyphData {
@@ -22,18 +27,14 @@ impl<'a> GlyphBuilder<'a> {
     ///
     /// For the packing it uses a simple height based packer.
     pub fn build_atlas(self, c: impl IntoIterator<Item = char, IntoIter: Send>) -> Option<Atlas> {
-        struct GlyphChar {
-            glyph: Glyph,
-            c: char,
-        }
-
         let mut glyphs_char = c
             .into_iter()
             .par_bridge()
             .filter_map(|c| {
-                let glyph = self.build(c)?;
-
-                Some(GlyphChar { glyph, c })
+                Some(GlyphChar {
+                    glyph: self.build(c)?,
+                    c,
+                })
             })
             .collect::<Vec<_>>();
 
@@ -41,7 +42,7 @@ impl<'a> GlyphBuilder<'a> {
             return None;
         }
 
-        let packer = Packer::pack(&mut glyphs_char, |g| g.glyph.build_config.bitmap_size);
+        let packer = Packer::pack(&mut glyphs_char);
         let mut glyphs = Vec::with_capacity(glyphs_char.len());
 
         let glyph_table = glyphs_char

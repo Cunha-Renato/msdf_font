@@ -255,8 +255,8 @@ impl EdgeSelector for MultiDistanceSelector {
         let prev_dir = prev.dir_1().normalize();
         let next_dir = next.dir_0().normalize();
 
-        let add = ap.dot((prev_dir + a_dir).normalize());
-        let bdd = -bp.dot((b_dir + next_dir).normalize());
+        let add = ap.dot(prev_dir + a_dir);
+        let bdd = -bp.dot(b_dir + next_dir);
 
         if add > 0.0 {
             let mut pd = distance.distance;

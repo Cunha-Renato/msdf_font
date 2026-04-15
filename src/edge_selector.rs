@@ -232,42 +232,43 @@ impl EdgeSelector for MultiDistanceSelector {
         let mut param = 0.0;
         let distance = edge.sd(self.p, &mut param);
 
-        if edge.color & EdgeColor::RED != EdgeColor::BLACK {
+        let color = edge.color;
+        let use_r = color & EdgeColor::RED != EdgeColor::BLACK;
+        let use_g = color & EdgeColor::GREEN != EdgeColor::BLACK;
+        let use_b = color & EdgeColor::BLUE != EdgeColor::BLACK;
+
+        if use_r {
             self.r.add_true_edge_distance(*edge, distance, param);
         }
-
-        if edge.color & EdgeColor::GREEN != EdgeColor::BLACK {
+        if use_g {
             self.g.add_true_edge_distance(*edge, distance, param);
         }
-
-        if edge.color & EdgeColor::BLUE != EdgeColor::BLACK {
+        if use_b {
             self.b.add_true_edge_distance(*edge, distance, param);
         }
 
         let ap = self.p - edge.point_0();
         let bp = self.p - edge.point_1();
-        let a_dir = edge.dir_0().normalize_or_zero();
-        let b_dir = edge.dir_1().normalize_or_zero();
-        let prev_dir = prev.dir_1().normalize_or_zero();
-        let next_dir = next.dir_0().normalize_or_zero();
 
-        let add = ap.dot((prev_dir + a_dir).normalize_or_zero());
-        let bdd = -bp.dot((b_dir + next_dir).normalize_or_zero());
+        let a_dir = edge.dir_0().normalize();
+        let b_dir = edge.dir_1().normalize();
+        let prev_dir = prev.dir_1().normalize();
+        let next_dir = next.dir_0().normalize();
+
+        let add = ap.dot((prev_dir + a_dir).normalize());
+        let bdd = -bp.dot((b_dir + next_dir).normalize());
 
         if add > 0.0 {
             let mut pd = distance.distance;
             if PerpendicularDistanceSelectorBase::perpendicular_distance(&mut pd, ap, -a_dir) {
                 pd = -pd;
-
-                if edge.color & EdgeColor::RED != EdgeColor::BLACK {
+                if use_r {
                     self.r.add_perpendicular_distance(pd);
                 }
-
-                if edge.color & EdgeColor::GREEN != EdgeColor::BLACK {
+                if use_g {
                     self.g.add_perpendicular_distance(pd);
                 }
-
-                if edge.color & EdgeColor::BLUE != EdgeColor::BLACK {
+                if use_b {
                     self.b.add_perpendicular_distance(pd);
                 }
             }
@@ -276,15 +277,13 @@ impl EdgeSelector for MultiDistanceSelector {
         if bdd > 0.0 {
             let mut pd = distance.distance;
             if PerpendicularDistanceSelectorBase::perpendicular_distance(&mut pd, bp, b_dir) {
-                if edge.color & EdgeColor::RED != EdgeColor::BLACK {
+                if use_r {
                     self.r.add_perpendicular_distance(pd);
                 }
-
-                if edge.color & EdgeColor::GREEN != EdgeColor::BLACK {
+                if use_g {
                     self.g.add_perpendicular_distance(pd);
                 }
-
-                if edge.color & EdgeColor::BLUE != EdgeColor::BLACK {
+                if use_b {
                     self.b.add_perpendicular_distance(pd);
                 }
             }

@@ -213,10 +213,10 @@ impl PerpendicularDistanceSelectorBase {
 
 #[derive(Default, Clone)]
 pub(crate) struct MultiDistanceSelector {
-    p: DVec2,
     r: PerpendicularDistanceSelectorBase,
     g: PerpendicularDistanceSelectorBase,
     b: PerpendicularDistanceSelectorBase,
+    p: DVec2,
 }
 impl EdgeSelector for MultiDistanceSelector {
     type Distance = MultiDistance;

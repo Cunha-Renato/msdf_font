@@ -9,6 +9,7 @@ pub trait BitmapData {
     fn set_px(&mut self, px: Self::Pixel, x: usize, y: usize);
     /// Gets the pixel at (x, y).
     fn get_px(&self, x: usize, y: usize) -> Self::Pixel;
+    fn iter_row_mut(&mut self, y: usize) -> impl Iterator<Item = &mut Self::Pixel>;
 }
 
 /// Struct representing the bitmap data.
@@ -29,6 +30,20 @@ impl<const N: usize> GlyphBitmapData<u8, N> {
     #[inline]
     pub fn bytes_mut(&mut self) -> &mut [u8] {
         self.bytes.as_flattened_mut()
+    }
+    
+}
+impl<T: Copy, const N: usize> GlyphBitmapData<T, N> {
+    #[inline]
+    pub(crate) fn irm(
+        &mut self,
+        x: usize,
+        y: usize,
+        width: usize,
+    ) -> impl Iterator<Item = &mut <GlyphBitmapData<T, N> as BitmapData>::Pixel> {
+        let offset = y * self.width + x;
+
+        self.bytes[offset..offset + width].iter_mut()
     }
 }
 impl<T: Default + Copy, const N: usize> GlyphBitmapData<T, N> {
@@ -61,5 +76,10 @@ impl<T: Copy, const N: usize> BitmapData for GlyphBitmapData<T, N> {
     #[inline]
     fn get_px(&self, x: usize, y: usize) -> Self::Pixel {
         self.bytes[y * self.width + x]
+    }
+    
+    #[inline]
+    fn iter_row_mut(&mut self, y: usize) -> impl Iterator<Item = &mut Self::Pixel> {
+        self.irm(0, y, self.width)
     }
 }

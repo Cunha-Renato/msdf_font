@@ -61,9 +61,9 @@ impl Shape {
 
         for y in 0..bitmap.height() {
             let py = height - (y as f64 + 0.5) + offset.y;
-            for x in 0..bitmap.width() {
+            for (x, px) in bitmap.iter_row_mut(y).enumerate() {
                 let p = DVec2::new(x as f64 + 0.5 + offset.x, py);
-                bitmap.set_px(convert(shape_distance_finder.distance(p)), x, y);
+                *px = convert(shape_distance_finder.distance(p));
             }
         }
     }

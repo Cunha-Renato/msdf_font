@@ -91,28 +91,30 @@ impl Edge {
             EdgeType::Line { p0, p1 } => {
                 let aq = p - p0;
                 let ab = p1 - p0;
-                *param = aq.dot(ab) / ab.dot(ab);
+                let inv_ab_len_sq = 1.0 / ab.dot(ab);
+                *param = aq.dot(ab) * inv_ab_len_sq;
                 let eq = if *param > 0.5 { p1 } else { p0 } - p;
-
-                let enpoint_distance = eq.length();
+                let endpoint_distance = eq.length();
 
                 if *param > 0.0 && *param < 1.0 {
                     let ortho_distance = ab.orthonormal(false, false).dot(aq);
-
-                    if ortho_distance.abs() < enpoint_distance {
+                    if ortho_distance.abs() < endpoint_distance {
                         return SignedDistance::new(ortho_distance, 0.0);
                     }
                 }
 
+                let ab_len = ab.length();
+                let cross = aq.perp_dot(ab);
                 SignedDistance::new(
-                    aq.perp_dot(ab).signum() * enpoint_distance,
-                    ab.normalize().dot(eq.normalize()).abs(),
+                    cross.signum() * endpoint_distance,
+                    (ab.dot(eq) / (ab_len * endpoint_distance)).abs(),
                 )
             }
             EdgeType::Quad { p0, p1, p2 } => {
                 let qa = p0 - p;
                 let ab = p1 - p0;
                 let br = p2 - p1 - ab;
+
                 let a = br.dot(br);
                 let b = 3.0 * ab.dot(br);
                 let c = 2.0f64.mul_add(ab.dot(ab), qa.dot(br));
@@ -120,18 +122,23 @@ impl Edge {
                 let mut t = [0.0; 3];
                 let solutions = solve_cubic(&mut t, a, b, c, d);
 
-                let mut ep_dir = self.dir_0();
-                let mut min_distance = (ep_dir.perp_dot(qa)).signum() * qa.length(); // distance from A
-                *param = -qa.dot(ep_dir) / ep_dir.dot(ep_dir);
-                let distance = (p2 - p).length(); // distance from B
-                if distance < min_distance.abs() {
-                    ep_dir = self.dir_1();
-                    min_distance = (ep_dir.perp_dot(p2 - p)).signum() * distance;
-                    *param = (p - p1).dot(ep_dir) / ep_dir.dot(ep_dir);
+                let ep_dir0 = self.dir_0();
+                let inv_ep0_sq = 1.0 / ep_dir0.dot(ep_dir0);
+                let qa_len = qa.length();
+                let mut min_distance = ep_dir0.perp_dot(qa).signum() * qa_len;
+                *param = -qa.dot(ep_dir0) * inv_ep0_sq;
+
+                let pb = p2 - p;
+                let pb_len = pb.length();
+                if pb_len < min_distance.abs() {
+                    let ep_dir1 = self.dir_1();
+                    min_distance = ep_dir1.perp_dot(pb).signum() * pb_len;
+                    *param = (p - p1).dot(ep_dir1) / ep_dir1.dot(ep_dir1);
                 }
+
                 for t in t.into_iter().take(solutions) {
                     if t > 0.0 && t < 1.0 {
-                        let qe = qa + 2.0 * t * ab + t * t * br;
+                        let qe = qa + t * (2.0 * ab + t * br);
                         let distance = qe.length();
                         if distance <= min_distance.abs() {
                             min_distance = (ab + t * br).perp_dot(qe).signum() * distance;
@@ -143,15 +150,18 @@ impl Edge {
                 if *param >= 0.0 && *param <= 1.0 {
                     return SignedDistance::new(min_distance, 0.0);
                 }
+
                 if *param < 0.5 {
+                    let ep_dir0 = self.dir_0();
                     SignedDistance::new(
                         min_distance,
-                        self.dir_0().normalize().dot(qa.normalize()).abs(),
+                        (ep_dir0.dot(qa) / (ep_dir0.length() * qa_len)).abs(),
                     )
                 } else {
+                    let ep_dir1 = self.dir_1();
                     SignedDistance::new(
                         min_distance,
-                        self.dir_1().normalize().dot((p2 - p).normalize()).abs(),
+                        (ep_dir1.dot(pb) / (ep_dir1.length() * pb_len)).abs(),
                     )
                 }
             }

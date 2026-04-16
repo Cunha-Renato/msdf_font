@@ -1,8 +1,8 @@
 # CHANGELOG
 
-## Next
+## 0.3.0
 * Improved performance.
-* Shape correction (previously feature `fix_geometry`) now is default behaviour.
+* Shape correction (previously in feature `fix_geometry`) is now the default behaviour.
 * `Atlas` packer is deterministic now.
 * `Atlas` now returns the `char` that failed to generate a `Glyph`.
 * Scrolling in `wgpu` example.

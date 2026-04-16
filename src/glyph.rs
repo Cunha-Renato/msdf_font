@@ -29,7 +29,7 @@ impl<T: Copy + std::ops::Sub<Output = T>> GlyphBounds<T> {
     }
 }
 
-/// Builder for [`crate::Glyph`] or [`crate::Atlas`].
+/// Builder for [`Glyph`] or [`Atlas`].
 #[derive(Debug, Clone, Copy)]
 pub struct GlyphBuilder<'a> {
     face: &'a Face<'a>,
@@ -148,7 +148,7 @@ impl Glyph {
         GlyphBuilder::new(face)
     }
 
-    /// Generates sdf bitmap with the [`crate::GlyphBuilder`] configuration.
+    /// Generates sdf bitmap with the [`GlyphBuilder`] configuration.
     ///
     /// The bitmap has only one channel (L8).
     pub fn sdf(&self) -> GlyphBitmapData<u8, 1> {

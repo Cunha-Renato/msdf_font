@@ -19,6 +19,7 @@ impl Packer {
 
     pub(super) fn pack(data: &mut Vec<GlyphChar>) -> Self {
         // Sort by height descending.
+        // falback to width then to char.
         data.sort_by(|a, b| {
             b.glyph.build_config.bitmap_size[1]
                 .cmp(&a.glyph.build_config.bitmap_size[1])

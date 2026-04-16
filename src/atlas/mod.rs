@@ -29,9 +29,9 @@ pub struct AtlasGlyphData {
     pub data: GlyphData,
 }
 impl<'a> GlyphBuilder<'a> {
-    /// See [`crate::GlyphBuilder::build`] and [`AtlasBuildResult`].
+    /// See [`GlyphBuilder::build`] and [`AtlasBuildResult`].
     ///
-    /// For the packing it uses a simple height based packer.
+    /// For the packing it uses a height based packer.
     pub fn build_atlas(
         self,
         c: impl IntoIterator<Item = char, IntoIter: Send>,
@@ -103,7 +103,7 @@ impl Atlas {
         GlyphBuilder::new(face)
     }
 
-    /// Generates sdf atlas bitmap with the [`crate::GlyphBuilder`] configuration.
+    /// Generates sdf atlas bitmap with the [`GlyphBuilder`] configuration.
     ///
     /// The bitmap has only one channel (L8).
     pub fn sdf(&mut self) -> GlyphBitmapData<u8, 1> {
@@ -113,7 +113,7 @@ impl Atlas {
         })
     }
 
-    /// Generates msdf atlas bitmap with the [`crate::GlyphBuilder`] configuration.
+    /// Generates msdf atlas bitmap with the [`GlyphBuilder`] configuration.
     ///
     /// The bitmap has 3 channels (Rgb8).
     pub fn msdf(&mut self, max_angle: f64, error_correction: bool) -> GlyphBitmapData<u8, 3> {

@@ -13,8 +13,6 @@ const NUM_CHANNELS: usize = 3;
 pub(crate) struct EdgeColor(u8);
 impl EdgeColor {
     /// A helepr function for choosing the next color when performing edge coloring.
-    ///
-    /// See [`crate::shape::ColoredContour::edge_coloring_simple`] for more details.
     // See https://github.com/Chlumsky/msdfgen/blob/master/core/edge-coloring.cpp#L28
     pub(crate) fn switch(self, seed: &mut usize, banned: EdgeColor) -> EdgeColor {
         let combined = self & banned;

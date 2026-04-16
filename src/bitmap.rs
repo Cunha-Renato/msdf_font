@@ -31,7 +31,6 @@ impl<const N: usize> GlyphBitmapData<u8, N> {
     pub fn bytes_mut(&mut self) -> &mut [u8] {
         self.bytes.as_flattened_mut()
     }
-    
 }
 impl<T: Copy, const N: usize> GlyphBitmapData<T, N> {
     #[inline]
@@ -77,7 +76,7 @@ impl<T: Copy, const N: usize> BitmapData for GlyphBitmapData<T, N> {
     fn get_px(&self, x: usize, y: usize) -> Self::Pixel {
         self.bytes[y * self.width + x]
     }
-    
+
     #[inline]
     fn iter_row_mut(&mut self, y: usize) -> impl Iterator<Item = &mut Self::Pixel> {
         self.irm(0, y, self.width)

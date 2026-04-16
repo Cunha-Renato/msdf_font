@@ -27,7 +27,9 @@ fn bench_sdf(c: &mut Criterion) {
         .build('A')
         .unwrap();
 
-    c.bench_function("sdf_generate", |b| b.iter(|| std::hint::black_box(glyph.sdf())));
+    c.bench_function("sdf_generate", |b| {
+        b.iter(|| std::hint::black_box(glyph.sdf()))
+    });
 }
 
 fn bench_msdf(c: &mut Criterion) {

@@ -26,7 +26,7 @@ If using `atlas` feature the resulting atlas will look something similar to this
 
 ![msdf_atlas_with_geometry_fix](assets/msdf_atlas_fix.png)
 
-Images generated from [OpenSans](https://fonts.google.com/specimen/Open+Sans) font.
+Image generated from [OpenSans](https://fonts.google.com/specimen/Open+Sans) font.
 
 ## Usage
 

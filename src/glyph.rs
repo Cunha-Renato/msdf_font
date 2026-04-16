@@ -3,6 +3,7 @@ use glam::DVec2;
 use ttf_parser::Face;
 
 /// Data representing the Glyph.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, Copy)]
 pub struct GlyphData {
     /// Bounds for constructing the rendering quad.
@@ -15,6 +16,7 @@ pub struct GlyphData {
     pub bearing: [i32; 2],
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, Copy)]
 pub struct GlyphBounds<T: Copy> {
     /// (Left, Top).

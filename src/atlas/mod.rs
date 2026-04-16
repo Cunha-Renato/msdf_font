@@ -1,10 +1,9 @@
 mod bitmap;
 mod packer;
 
-use crate::{
-    Glyph, GlyphBitmapData, GlyphBounds, GlyphBuilder, GlyphData,
-    atlas::{bitmap::BitmapDataRegion, packer::Packer},
-};
+use crate::{Glyph, GlyphBitmapData, GlyphBounds, GlyphBuilder, GlyphData};
+use bitmap::BitmapDataRegion;
+use packer::Packer;
 use rayon::iter::{Either, ParallelBridge, ParallelIterator};
 use std::collections::HashMap;
 
@@ -16,17 +15,13 @@ pub struct AtlasBuildResult {
     pub rejected: Option<Vec<char>>,
 }
 
-struct GlyphChar {
-    glyph: Glyph,
-    c: char,
-}
-
 /// Similar to [`GlyphData`] but for the [`Atlas`] mode.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug)]
 pub struct AtlasGlyphData {
+    pub data: GlyphData,
     /// Location and size of the glyph (in px) inside the atlas.
     pub atlas_bounds: GlyphBounds<f32>,
-    pub data: GlyphData,
 }
 impl<'a> GlyphBuilder<'a> {
     /// See [`GlyphBuilder::build`] and [`AtlasBuildResult`].
@@ -158,4 +153,9 @@ impl Atlas {
 
         bitmap
     }
+}
+
+struct GlyphChar {
+    glyph: Glyph,
+    c: char,
 }

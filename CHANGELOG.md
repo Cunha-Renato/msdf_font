@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## 0.3.1
+* Serde support via the `serde` feature.
+
 ## 0.3.0
 * Improved performance.
 * Shape correction (previously in feature `fix_geometry`) is now the default behaviour.

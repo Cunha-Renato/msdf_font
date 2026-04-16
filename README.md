@@ -12,6 +12,7 @@ Most of it is translated from the original C++ [msdfgen](https://github.com/Chlu
 ## Crate Features
 
 * `atlas`: Atlas generation, based on glyph height. Currently this feature uses the [rayon](https://crates.io/crates/rayon) crate.
+* `serde`: serde support for relevant structs.
 
 ## Supports
 

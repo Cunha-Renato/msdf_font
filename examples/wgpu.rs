@@ -345,8 +345,12 @@ impl Font {
         #[cfg(feature = "atlas")]
         let (sdf, msdf, atlas) = {
             let chars = (0..0xff).filter_map(char::from_u32);
-            let mut atlas = builder.build_atlas(chars).unwrap();
+            let atlas_result = builder.build_atlas(chars);
+            let mut atlas = atlas_result.atlas.unwrap();
 
+            if let Some(rejected) = atlas_result.rejected {
+                println!("{} glyphs where rejected.", rejected.len());
+            }
             (atlas.sdf(), atlas.msdf(3.0, true), atlas)
         };
 
@@ -383,6 +387,8 @@ struct AppCore {
     font: Font,
     window: Arc<Window>,
     text_size: f32,
+    #[cfg(feature = "atlas")]
+    cursor_offset: f32,
 }
 impl AppCore {
     async fn new(window: Window) -> Self {
@@ -395,6 +401,8 @@ impl AppCore {
             wgpu_state,
             font,
             text_size: 100.0,
+            #[cfg(feature = "atlas")]
+            cursor_offset: 0.0,
         }
     }
 
@@ -487,6 +495,13 @@ impl AppCore {
 
     fn event(&mut self, event: WindowEvent) {
         match event {
+            #[cfg(feature = "atlas")]
+            WindowEvent::MouseWheel { delta, .. } => match delta {
+                winit::event::MouseScrollDelta::LineDelta(_, v) => self.cursor_offset += v,
+                winit::event::MouseScrollDelta::PixelDelta(physical_position) => {
+                    self.cursor_offset -= physical_position.y as f32;
+                }
+            },
             WindowEvent::KeyboardInput { event, .. } => {
                 if !event.state.is_pressed() {
                     return;
@@ -549,8 +564,11 @@ impl AppCore {
         #[cfg(feature = "atlas")]
         return {
             let atlas_size = [self.font.msdf.width as f32, self.font.msdf.height as f32];
-            let mut cursor = [0.0, self.font.ascender * scale];
             let new_line = self.font.line_space * scale;
+            let mut cursor = [
+                0.0,
+                self.font.ascender * scale + self.cursor_offset * new_line,
+            ];
 
             (0..0xff)
                 .filter_map(char::from_u32)

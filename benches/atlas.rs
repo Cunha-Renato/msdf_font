@@ -17,8 +17,7 @@ fn bench_atlas_build(c: &mut Criterion) {
             GlyphBuilder::new(&face)
                 .px_range(PX_RANGE)
                 .px_size(PX_SIZE)
-                .build_atlas(ASCII)
-                .unwrap()
+                .build_atlas(ASCII);
         })
     });
 }
@@ -29,6 +28,7 @@ fn bench_sdf_atlas(c: &mut Criterion) {
         .px_range(PX_RANGE)
         .px_size(PX_SIZE)
         .build_atlas(ASCII)
+        .atlas
         .unwrap();
 
     c.bench_function("bench_sdf_atlas", |b| {
@@ -42,6 +42,7 @@ fn bench_msdf_atlas(c: &mut Criterion) {
         .px_range(PX_RANGE)
         .px_size(PX_SIZE)
         .build_atlas(ASCII)
+        .atlas
         .unwrap();
 
     c.bench_function("bench_msdf_atlas", |b| {

@@ -20,7 +20,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         let (msdf, sdf) = (glyph.msdf(3.0, true), glyph.sdf());
 
         #[cfg(feature = "atlas")]
-        let mut atlas = builder.build_atlas(char_data).unwrap();
+        let atlas_result = builder.build_atlas(char_data);
+        let mut atlas = atlas_result.atlas.unwrap();
+
+        if let Some(rejected) = atlas_result.rejected {
+            println!("{} glyphs where rejected.", rejected.len());
+        }
 
         #[cfg(feature = "atlas")]
         let (msdf, sdf) = (atlas.msdf(3.0, false), atlas.sdf());

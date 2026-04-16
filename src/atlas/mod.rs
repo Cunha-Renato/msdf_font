@@ -5,15 +5,23 @@ use crate::{
     Glyph, GlyphBitmapData, GlyphBounds, GlyphBuilder, GlyphData,
     atlas::{bitmap::BitmapDataRegion, packer::Packer},
 };
-use rayon::iter::{ParallelBridge, ParallelIterator};
+use rayon::iter::{Either, ParallelBridge, ParallelIterator};
 use std::collections::HashMap;
+
+/// The result of [`GlyphBuilder::build_atlas`].
+pub struct AtlasBuildResult {
+    /// [`Some`] if at least one [`Glyph`] was built, [`None`] otherwise.
+    pub atlas: Option<Atlas>,
+    /// [`Some`] if at least one [`Glyph`] failed do build, containing the [`char`], [`None`] otherwise.
+    pub rejected: Option<Vec<char>>,
+}
 
 struct GlyphChar {
     glyph: Glyph,
     c: char,
 }
 
-/// Similar to [`crate::GlyphData`] but for the atlas mode.
+/// Similar to [`GlyphData`] but for the [`Atlas`] mode.
 #[derive(Debug)]
 pub struct AtlasGlyphData {
     /// Location and size of the glyph (in px) inside the atlas.
@@ -21,25 +29,33 @@ pub struct AtlasGlyphData {
     pub data: GlyphData,
 }
 impl<'a> GlyphBuilder<'a> {
-    /// Returns [`None`] if no glyph could be build.
-    ///
-    /// See [`crate::GlyphBuilder::build`].
+    /// See [`crate::GlyphBuilder::build`] and [`AtlasBuildResult`].
     ///
     /// For the packing it uses a simple height based packer.
-    pub fn build_atlas(self, c: impl IntoIterator<Item = char, IntoIter: Send>) -> Option<Atlas> {
-        let mut glyphs_char = c
+    pub fn build_atlas(
+        self,
+        c: impl IntoIterator<Item = char, IntoIter: Send>,
+    ) -> AtlasBuildResult {
+        let (mut glyphs_char, rejected): (Vec<_>, Vec<_>) = c
             .into_iter()
             .par_bridge()
-            .filter_map(|c| {
-                Some(GlyphChar {
-                    glyph: self.build(c)?,
-                    c,
-                })
-            })
-            .collect::<Vec<_>>();
+            .partition_map(|c| match self.build(c) {
+                Some(glyph) => Either::Left(GlyphChar { glyph, c }),
+                None => Either::Right(c),
+            });
 
+        let rejected = if !rejected.is_empty() {
+            Some(rejected)
+        } else {
+            None
+        };
+
+        // Either no glyph was present, or all the glyphs where rejected.
         if glyphs_char.is_empty() {
-            return None;
+            return AtlasBuildResult {
+                atlas: None,
+                rejected,
+            };
         }
 
         let packer = Packer::pack(&mut glyphs_char);
@@ -64,11 +80,13 @@ impl<'a> GlyphBuilder<'a> {
             })
             .collect();
 
-        Some(Atlas {
+        let atlas = Some(Atlas {
             glyph_table,
             glyphs,
             packer,
-        })
+        });
+
+        AtlasBuildResult { atlas, rejected }
     }
 }
 

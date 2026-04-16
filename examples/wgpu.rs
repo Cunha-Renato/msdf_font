@@ -1,10 +1,12 @@
 #[cfg(feature = "atlas")]
 use msdf_font::AtlasGlyphData;
-#[cfg(not(feature = "atlas"))]
-use msdf_font::GlyphData;
-use msdf_font::{GlyphBitmapData, GlyphBounds, GlyphBuilder};
 #[cfg(feature = "atlas")]
 use std::collections::HashMap;
+
+#[cfg(not(feature = "atlas"))]
+use msdf_font::GlyphData;
+
+use msdf_font::{GlyphBitmapData, GlyphBounds, GlyphBuilder};
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
 use winit::{

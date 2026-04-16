@@ -138,11 +138,11 @@ impl Atlas {
         let bitmap_ptr = &mut bitmap as *mut GlyphBitmapData<u8, N> as usize;
 
         self.glyphs
-            // .par_iter_mut()
             .iter_mut()
             .zip(&self.packer.rects)
             .par_bridge()
             .for_each(|(g, rect)| {
+                // This should be safe, since the data is non overlapping.
                 let bitmap_ref = unsafe { &mut *(bitmap_ptr as *mut GlyphBitmapData<u8, N>) };
 
                 let mut bitmap_region = BitmapDataRegion {

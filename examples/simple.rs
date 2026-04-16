@@ -1,38 +1,46 @@
 use std::error::Error;
 
-use msdf_font::{GlyphBuilder, ttf_parser};
+use msdf_font::{GlyphBitmapData, GlyphBuilder, ttf_parser};
 
+#[cfg(not(feature = "atlas"))]
 fn main() -> Result<(), Box<dyn Error>> {
     let face = ttf_parser::Face::parse(include_bytes!("assets/OpenSans-Medium.ttf"), 0)?;
+    let mut glyph = GlyphBuilder::new(&face)
+        .px_range(2)
+        .px_size(100)
+        .build('ç')
+        .unwrap();
 
-    #[cfg(not(feature = "atlas"))]
-    let char_data = 'ç';
-    #[cfg(feature = "atlas")]
+    let (msdf, sdf) = (glyph.msdf(3.0, true), glyph.sdf());
+    save(msdf, sdf)?;
+
+    Ok(())
+}
+
+#[cfg(feature = "atlas")]
+fn main() -> Result<(), Box<dyn Error>> {
+    let face = ttf_parser::Face::parse(include_bytes!("assets/OpenSans-Medium.ttf"), 0)?;
     let char_data = (0..=0xff).filter_map(char::from_u32);
 
-    let builder = GlyphBuilder::new(&face).px_range(2).px_size(100);
+    let atlas_result = GlyphBuilder::new(&face)
+        .px_range(2)
+        .px_size(100)
+        .build_atlas(char_data);
 
-    #[cfg(not(feature = "atlas"))]
-    let mut glyph = builder.build(char_data).unwrap();
+    let mut atlas = atlas_result.atlas.unwrap();
 
-    let (msdf, sdf) = {
-        #[cfg(not(feature = "atlas"))]
-        let (msdf, sdf) = (glyph.msdf(3.0, true), glyph.sdf());
+    if let Some(rejected) = atlas_result.rejected {
+        println!("{} glyphs where rejected.", rejected.len());
+    }
 
-        #[cfg(feature = "atlas")]
-        let atlas_result = builder.build_atlas(char_data);
-        let mut atlas = atlas_result.atlas.unwrap();
+    let (msdf, sdf) = (atlas.msdf(3.0, false), atlas.sdf());
 
-        if let Some(rejected) = atlas_result.rejected {
-            println!("{} glyphs where rejected.", rejected.len());
-        }
+    save(msdf, sdf)?;
 
-        #[cfg(feature = "atlas")]
-        let (msdf, sdf) = (atlas.msdf(3.0, false), atlas.sdf());
+    Ok(())
+}
 
-        (msdf, sdf)
-    };
-
+fn save(msdf: GlyphBitmapData<u8, 3>, sdf: GlyphBitmapData<u8, 1>) -> Result<(), Box<dyn Error>> {
     image::save_buffer(
         "simple_msdf.png",
         msdf.bytes(),

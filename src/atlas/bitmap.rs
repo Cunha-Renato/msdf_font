@@ -31,6 +31,11 @@ impl<const N: usize> BitmapData for BitmapDataRegion<'_, N> {
     }
 
     #[inline]
+    fn iter_row(&self, y: usize) -> impl Iterator<Item = &Self::Pixel> {
+        self.data.ir(self.x, y + self.y, self.width)
+    }
+
+    #[inline]
     fn iter_row_mut(&mut self, y: usize) -> impl Iterator<Item = &mut Self::Pixel> {
         self.data.irm(self.x, y + self.y, self.width)
     }

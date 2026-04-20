@@ -33,7 +33,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         println!("{} glyphs where rejected.", rejected.len());
     }
 
-    let (msdf, sdf) = (atlas.msdf(3.0, false), atlas.sdf());
+    let (msdf, sdf) = (atlas.msdf(3.0, true), atlas.sdf());
 
     save(msdf, sdf)?;
 

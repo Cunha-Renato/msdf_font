@@ -67,7 +67,7 @@ fn main() {
     let mut atlas_result = GlyphBuilder::new(&face)
         .px_range(2)
         .px_size(40)
-        .build(['A', 'B', 'C']);
+        .build_atlas(['A', 'B', 'C']);
     
     if let Some(rejected_chars) = atlas_result.rejected {
         println!("Rejected {} chars.", rejected_chars.len());
